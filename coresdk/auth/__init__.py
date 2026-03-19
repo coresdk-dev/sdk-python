@@ -1,0 +1,1 @@
+"""CoreSDK auth module."""

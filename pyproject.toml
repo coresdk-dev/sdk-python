@@ -1,0 +1,36 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "coresdk"
+version = "0.1.0"
+description = "CoreSDK — auth, policy, observability. One import."
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.9"
+dependencies = [
+    "grpcio>=1.60.0,<2.0.0",
+    "grpcio-status>=1.60.0,<2.0.0",
+    "protobuf>=4.0.0",
+    "opentelemetry-api>=1.25.0,<2.0.0",
+    "opentelemetry-sdk>=1.25.0,<2.0.0",
+    "opentelemetry-exporter-otlp>=1.25.0,<2.0.0",
+]
+
+[project.optional-dependencies]
+fastapi = ["fastapi>=0.100.0", "starlette>=0.27.0"]
+flask = ["flask>=2.3.0"]
+django = ["django>=4.2.0"]
+dev = ["pytest>=7.0", "pytest-asyncio>=0.21", "httpx>=0.24"]
+
+[project.entry-points."pytest11"]
+coresdk = "coresdk.pytest_plugin"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
+[tool.pip-audit]
+# Run: pip-audit --requirement requirements.txt
+# CI: pip-audit is run as part of the security gate before release.
+# Tracked issues: none open.

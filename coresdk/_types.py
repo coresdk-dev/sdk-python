@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -22,5 +22,5 @@ class AuthDecision:
     """Result of an authorization check."""
 
     allowed: bool
-    claims: Optional[Claims] = None
+    claims: Claims | None = None
     reason: str = ""

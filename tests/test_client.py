@@ -11,7 +11,6 @@ from coresdk._client import CoreSDKClient
 from coresdk._config import SDKConfig
 from coresdk.errors._rfc9457 import ProblemDetailError
 
-
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

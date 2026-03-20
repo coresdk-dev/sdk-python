@@ -17,7 +17,9 @@ class MockSDK:
         fail_mode: str = "open",
     ) -> None:
         self.default_allow = default_allow
-        self.default_claims = default_claims or Claims(sub="test-user", tenant_id="", roles=["user"], exp=0)
+        self.default_claims = default_claims or Claims(
+            sub="test-user", tenant_id="", roles=["user"], exp=0
+        )
         self.fail_mode = fail_mode
         self.authorize_calls: list[dict] = []
         self.policy_calls: list[dict] = []

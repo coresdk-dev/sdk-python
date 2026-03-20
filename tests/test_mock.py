@@ -16,7 +16,7 @@ def test_mock_sdk_authorize_records_calls():
     mock.authorize("tok1")
     mock.authorize("tok2", action="read")
     assert len(mock.authorize_calls) == 2
-    assert mock.authorize_calls[0]["token"] == "tok1"
+    assert mock.authorize_calls[0]["token"] == "tok1"  # noqa: S105
     assert mock.authorize_calls[1]["action"] == "read"
 
 

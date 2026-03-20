@@ -233,7 +233,7 @@ class CoreSDKClient:
             if not base_url:
                 return True  # no control plane configured, fail-open
             url = f"{base_url}/api/v1/flags"
-            req = urllib.request.Request(url, headers={"Accept": "application/json"})
+            req = urllib.request.Request(url, headers={"Accept": "application/json"})  # noqa: S310
             with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
                 data = json.loads(resp.read().decode())
             flags = data.get("flags", data) if isinstance(data, dict) else data

@@ -8,7 +8,6 @@ import pytest
 
 from coresdk.errors._rfc9457 import ProblemDetailError
 
-
 # ---------------------------------------------------------------------------
 # Factory methods
 # ---------------------------------------------------------------------------
@@ -178,8 +177,8 @@ def test_content_type_used_in_response_headers_django():
         from django.conf import settings as _s
 
         if not _s.configured:
-            _s.configure(DEFAULT_AUTO_FIELD="django.db.models.BigAutoField", DATABASES={}, INSTALLED_APPS=[], DEFAULT_CHARSET="utf-8")
-    except Exception:
+            _s.configure(DEFAULT_AUTO_FIELD="django.db.models.BigAutoField", DATABASES={}, INSTALLED_APPS=[], DEFAULT_CHARSET="utf-8")  # noqa: E501
+    except Exception:  # noqa: S110
         pass
 
     from django.http import HttpRequest, HttpResponse

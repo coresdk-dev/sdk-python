@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import concurrent.futures
-from unittest.mock import MagicMock
 
 import pytest
 
@@ -23,7 +22,6 @@ except ImportError:
 
 from coresdk._types import AuthDecision
 from coresdk.testing._mock import MockSDK
-
 
 # ---------------------------------------------------------------------------
 # Helpers — build a minimal Django request/response stack without runserver

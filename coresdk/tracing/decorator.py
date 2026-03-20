@@ -1,6 +1,5 @@
 """@trace(intent="...") decorator — sets coresdk.intent OTel span attribute."""
 
-import asyncio
 import functools
 import inspect
 from collections.abc import Callable

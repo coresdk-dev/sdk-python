@@ -9,7 +9,7 @@ from typing import Any
 from coresdk.errors._rfc9457 import ProblemDetailError
 
 try:
-    from flask import Response, g, jsonify, request
+    from flask import Response, g, request
 
     _flask_available = True
 except ImportError:

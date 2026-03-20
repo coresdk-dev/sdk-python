@@ -9,8 +9,7 @@ import pytest
 
 from coresdk.testing._mock import FakeSpanExporter, assert_no_pii
 from coresdk.tracing.decorator import trace
-from coresdk.tracing.processor import PIIMaskingSpanProcessor, mask_value
-
+from coresdk.tracing.processor import mask_value
 
 # ---------------------------------------------------------------------------
 # @trace decorator — sync
@@ -41,8 +40,8 @@ def test_trace_sync_with_custom_span_name():
     """span_name parameter overrides the default span name (function qualname)."""
     pytest.importorskip("opentelemetry")
     from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
     from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
     exporter = InMemorySpanExporter()
     provider = TracerProvider()
@@ -80,8 +79,8 @@ def test_trace_async_with_custom_span_name():
     """span_name parameter works for async functions."""
     pytest.importorskip("opentelemetry")
     from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
     from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
     exporter = InMemorySpanExporter()
     provider = TracerProvider()
@@ -105,8 +104,8 @@ def test_trace_async_sets_intent_attribute():
     """@trace sets coresdk.intent attribute on the span."""
     pytest.importorskip("opentelemetry")
     from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
     from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
 
     exporter = InMemorySpanExporter()
     provider = TracerProvider()

@@ -96,6 +96,24 @@ Secrets and PII are redacted from all span attributes before export. Set `OTEL_E
 | `CORESDK_FAIL_MODE` | `open` | `open` or `closed` on sidecar error |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | OTLP trace exporter endpoint |
 
+## mTLS
+
+To enable mutual TLS between your application and the sidecar, set all three TLS environment variables:
+
+| Variable | Description |
+|----------|-------------|
+| `CORESDK_TLS_CERT` | Path to the client certificate (PEM) |
+| `CORESDK_TLS_KEY` | Path to the client private key (PEM) |
+| `CORESDK_TLS_CA` | Path to the CA certificate (PEM) |
+
+```bash
+export CORESDK_TLS_CERT=/path/to/client.crt
+export CORESDK_TLS_KEY=/path/to/client.key
+export CORESDK_TLS_CA=/path/to/ca.crt
+```
+
+When all three are present, the SDK configures grpcio with TLS 1.3 mutual authentication automatically. See the [core-sdk README](https://github.com/coresdk-dev/core-sdk#mtls-configuration) for certificate generation instructions.
+
 ## Examples
 
 Full working projects in [coresdk-dev/examples](https://github.com/coresdk-dev/examples):

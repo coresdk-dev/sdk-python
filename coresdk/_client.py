@@ -8,7 +8,7 @@ import grpc
 
 from coresdk._config import SDKConfig
 from coresdk._types import AuthDecision, Claims
-from coresdk.errors._rfc9457 import ProblemDetailError
+from coresdk.errors._rfc9457 import CoreSDKError, ProblemDetailError
 
 logger = logging.getLogger(__name__)
 
@@ -177,6 +177,15 @@ class CoreSDKClient:
                 detail=str(e),
                 type_uri="https://coresdk.io/errors/unauthorized",
             ) from e
+        except Exception as exc:
+            if self.config.fail_mode == "closed":
+                raise CoreSDKError(f"CoreSDK fail-closed: {exc}") from exc
+            logger.warning("Auth unexpected error, failing open: %s", exc)
+            return AuthDecision(
+                allowed=True,
+                claims=Claims(sub="unknown", tenant_id=self.config.tenant_id, roles=[], exp=0),
+                reason="fail-open",
+            )
 
     def evaluate_policy(self, rule: str, input_data: dict) -> bool:
         channel = self._get_channel()
@@ -209,3 +218,31 @@ class CoreSDKClient:
                 detail=str(e),
                 type_uri="https://coresdk.io/errors/policy",
             ) from e
+        except Exception as exc:
+            if self.config.fail_mode == "closed":
+                raise CoreSDKError(f"CoreSDK fail-closed: {exc}") from exc
+            logger.warning("Policy unexpected error, failing open: %s", exc)
+            return True
+
+    def is_enabled(self, flag_key: str, tenant_id: str = "") -> bool:
+        """Check if a feature flag is enabled via the control plane flags API."""
+        try:
+            import urllib.request
+
+            base_url = getattr(self.config, "control_plane_url", "") or ""
+            if not base_url:
+                return True  # no control plane configured, fail-open
+            url = f"{base_url}/api/v1/flags"
+            req = urllib.request.Request(url, headers={"Accept": "application/json"})
+            with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
+                data = json.loads(resp.read().decode())
+            flags = data.get("flags", data) if isinstance(data, dict) else data
+            if isinstance(flags, list):
+                for flag in flags:
+                    if flag.get("key") == flag_key or flag.get("name") == flag_key:
+                        return bool(flag.get("enabled", True))
+            return True  # unknown flag -> fail-open
+        except Exception:
+            if getattr(self.config, "fail_mode", "open") == "closed":
+                raise
+            return True  # fail-open

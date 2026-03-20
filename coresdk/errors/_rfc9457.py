@@ -4,6 +4,10 @@ import json
 from typing import Any
 
 
+class CoreSDKError(Exception):
+    """General CoreSDK error — raised on fail-closed paths."""
+
+
 class ProblemDetailError(Exception):
     """RFC 9457 Problem Details for HTTP APIs."""
 

@@ -29,9 +29,9 @@ REDACTED = "[REDACTED]"
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 _SSN_RE = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
 _CC_RE = re.compile(r"\b(?:\d[ -]?){15,16}\b")
-_JWT_RE = re.compile(r"eyJ[A-Za-z0-9_\-]+\.eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+")
+_JWT_RE = re.compile(r"eyJ[A-Za-z0-9_\-]+(?:\.[A-Za-z0-9_\-]+)+")
 _BEARER_RE = re.compile(r"Bearer\s+\S+", re.IGNORECASE)
-_APIKEY_RE = re.compile(r"\bsk-[A-Za-z0-9]{8,}\b")
+_APIKEY_RE = re.compile(r"\bsk-[A-Za-z0-9_\-]{4,}\b")
 
 
 def mask_value(value: Any) -> Any:  # noqa: ANN401
@@ -47,7 +47,10 @@ def mask_value(value: Any) -> Any:  # noqa: ANN401
 def mask_attributes(attributes: dict) -> dict:
     result = {}
     for key, value in attributes.items():
-        if key.lower() in BLOCKED_FIELDS:
+        key_lower = key.lower()
+        # Match exact key or dotted suffix (e.g. "user.password" → "password")
+        key_suffix = key_lower.rsplit(".", 1)[-1]
+        if key_lower in BLOCKED_FIELDS or key_suffix in BLOCKED_FIELDS:
             result[key] = REDACTED
         else:
             result[key] = mask_value(value)

@@ -87,8 +87,8 @@ PII_PATTERNS = [
     r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
     r"\b(?:\d[ -]?){15,16}\b",  # credit card
     r"Bearer\s+\S+",  # Bearer token
-    r"eyJ[A-Za-z0-9_\-]+\.eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+",  # JWT
-    r"\bsk-[A-Za-z0-9]{8,}\b",  # API key (sk-*)
+    r"eyJ[A-Za-z0-9_\-]+(?:\.[A-Za-z0-9_\-]+)+",  # JWT
+    r"\bsk-[A-Za-z0-9_\-]{4,}\b",  # API key (sk-*)
 ]
 
 

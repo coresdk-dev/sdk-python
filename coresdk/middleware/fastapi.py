@@ -85,9 +85,16 @@ try:
                 )
 
             try:
-                claims = self.sdk.authorize(token)
+                decision = self.sdk.authorize(token)
+                claims = decision.claims if hasattr(decision, "claims") else decision
                 request.state.coresdk_user = claims
-                request.state.coresdk_tenant = claims.get("tenant_id", "")
+                if not decision.allowed and decision.reason != "fail-open":
+                    return JSONResponse(
+                        status_code=403,
+                        content={"type": "https://coresdk.io/errors/forbidden", "title": "Forbidden", "status": 403, "detail": decision.reason or "Forbidden"},
+                        media_type="application/problem+json",
+                    )
+                request.state.coresdk_tenant = claims.get("tenant_id", "") if isinstance(claims, dict) else ""
             except Exception as e:
                 if self.sdk.config.fail_mode == "open":
                     logger.warning(f"Auth failed, failing open: {e}")

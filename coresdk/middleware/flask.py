@@ -71,6 +71,13 @@ class CoreSDKFlask:
                 decision = self.sdk.authorize_sync(
                     token, action=request.method, resource=request.path
                 )
+                if not decision.allowed:
+                    return jsonify({
+                        "type": "https://coresdk.io/errors/unauthorized",
+                        "title": "Unauthorized",
+                        "status": 401,
+                        "detail": decision.reason or "Token rejected",
+                    }), 401
                 if decision.reason == "fail-open":
                     if span and _StatusCode:  # type: ignore[truthy-function]
                         span.set_status(_StatusCode.OK)

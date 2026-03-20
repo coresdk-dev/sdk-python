@@ -13,7 +13,7 @@ class MockSDK:
         self,
         *,
         default_allow: bool = True,
-        default_claims: dict[str, Any] | None = None,
+        default_claims: "Claims | None" = None,
         fail_mode: str = "open",
     ) -> None:
         self.default_allow = default_allow

@@ -93,9 +93,7 @@ def test_to_dict_contains_status():
 
 
 def test_to_dict_contains_type_when_set():
-    err = ProblemDetailError(
-        "Not Found", 404, type_uri="https://example.com/errors/not-found"
-    )
+    err = ProblemDetailError("Not Found", 404, type_uri="https://example.com/errors/not-found")
     d = err.to_dict()
     assert "type" in d
     assert d["type"] == "https://example.com/errors/not-found"
@@ -177,7 +175,12 @@ def test_content_type_used_in_response_headers_django():
         from django.conf import settings as _s
 
         if not _s.configured:
-            _s.configure(DEFAULT_AUTO_FIELD="django.db.models.BigAutoField", DATABASES={}, INSTALLED_APPS=[], DEFAULT_CHARSET="utf-8")  # noqa: E501
+            _s.configure(
+                DEFAULT_AUTO_FIELD="django.db.models.BigAutoField",
+                DATABASES={},
+                INSTALLED_APPS=[],
+                DEFAULT_CHARSET="utf-8",
+            )
     except Exception:  # noqa: S110
         pass
 

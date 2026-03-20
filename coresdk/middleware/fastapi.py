@@ -100,7 +100,8 @@ try:
                         media_type="application/problem+json",
                     )
                 request.state.coresdk_tenant = (
-                    claims.get("tenant_id", "") if isinstance(claims, dict)
+                    claims.get("tenant_id", "")
+                    if isinstance(claims, dict)
                     else getattr(claims, "tenant_id", "")
                 )
             except Exception as e:

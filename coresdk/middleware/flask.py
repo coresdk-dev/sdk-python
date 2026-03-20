@@ -28,6 +28,7 @@ except ImportError:
 def _problem_response(body: dict, status: int):
     """Return a Flask response with Content-Type: application/problem+json."""
     import json
+
     return Response(
         json.dumps(body),
         status=status,
@@ -57,12 +58,15 @@ class CoreSDKFlask:
         )
 
         if not token:
-            return _problem_response({
-                "type": "https://coresdk.io/errors/unauthorized",
-                "title": "Unauthorized",
-                "status": 401,
-                "detail": "Missing Bearer token",
-            }, 401)
+            return _problem_response(
+                {
+                    "type": "https://coresdk.io/errors/unauthorized",
+                    "title": "Unauthorized",
+                    "status": 401,
+                    "detail": "Missing Bearer token",
+                },
+                401,
+            )
 
         import contextlib
 
@@ -80,12 +84,15 @@ class CoreSDKFlask:
                     token, action=request.method, resource=request.path
                 )
                 if not decision.allowed:
-                    return _problem_response({
-                        "type": "https://coresdk.io/errors/unauthorized",
-                        "title": "Unauthorized",
-                        "status": 401,
-                        "detail": decision.reason or "Token rejected",
-                    }, 401)
+                    return _problem_response(
+                        {
+                            "type": "https://coresdk.io/errors/unauthorized",
+                            "title": "Unauthorized",
+                            "status": 401,
+                            "detail": decision.reason or "Token rejected",
+                        },
+                        401,
+                    )
                 if decision.reason == "fail-open":
                     if span and _StatusCode:  # type: ignore[truthy-function]
                         span.set_status(_StatusCode.OK)
@@ -119,11 +126,14 @@ def require_auth(f: Callable) -> Callable:
     @functools.wraps(f)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         if not getattr(g, "claims", None):
-            return _problem_response({
-                "type": "https://coresdk.io/errors/forbidden",
-                "title": "Forbidden",
-                "status": 403,
-            }, 403)
+            return _problem_response(
+                {
+                    "type": "https://coresdk.io/errors/forbidden",
+                    "title": "Forbidden",
+                    "status": 403,
+                },
+                403,
+            )
         return f(*args, **kwargs)
 
     return wrapper

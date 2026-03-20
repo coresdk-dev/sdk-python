@@ -9,7 +9,7 @@ from typing import Any
 from coresdk.errors._rfc9457 import ProblemDetailError
 
 try:
-    from flask import g, jsonify, request
+    from flask import Response, g, jsonify, request
 
     _flask_available = True
 except ImportError:
@@ -23,6 +23,16 @@ try:
 except ImportError:
     tracer = None  # type: ignore
     _StatusCode = None  # type: ignore
+
+
+def _problem_response(body: dict, status: int):
+    """Return a Flask response with Content-Type: application/problem+json."""
+    import json
+    return Response(
+        json.dumps(body),
+        status=status,
+        mimetype="application/problem+json",
+    )
 
 
 class CoreSDKFlask:
@@ -47,14 +57,12 @@ class CoreSDKFlask:
         )
 
         if not token:
-            return jsonify(
-                {
-                    "type": "https://coresdk.io/errors/unauthorized",
-                    "title": "Unauthorized",
-                    "status": 401,
-                    "detail": "Missing Bearer token",
-                }
-            ), 401
+            return _problem_response({
+                "type": "https://coresdk.io/errors/unauthorized",
+                "title": "Unauthorized",
+                "status": 401,
+                "detail": "Missing Bearer token",
+            }, 401)
 
         import contextlib
 
@@ -72,12 +80,12 @@ class CoreSDKFlask:
                     token, action=request.method, resource=request.path
                 )
                 if not decision.allowed:
-                    return jsonify({
+                    return _problem_response({
                         "type": "https://coresdk.io/errors/unauthorized",
                         "title": "Unauthorized",
                         "status": 401,
                         "detail": decision.reason or "Token rejected",
-                    }), 401
+                    }, 401)
                 if decision.reason == "fail-open":
                     if span and _StatusCode:  # type: ignore[truthy-function]
                         span.set_status(_StatusCode.OK)
@@ -91,7 +99,7 @@ class CoreSDKFlask:
                     span.record_exception(exc)
                     if _StatusCode:  # type: ignore[truthy-function]
                         span.set_status(_StatusCode.ERROR)
-                return jsonify(exc.to_dict()), exc.status
+                return _problem_response(exc.to_dict(), exc.status)
             except Exception as exc:
                 if span:
                     span.record_exception(exc)
@@ -102,7 +110,7 @@ class CoreSDKFlask:
         return None
 
     def _handle_problem_detail(self, error: ProblemDetailError) -> Any:
-        return jsonify(error.to_dict()), error.status
+        return _problem_response(error.to_dict(), error.status)
 
 
 def require_auth(f: Callable) -> Callable:
@@ -111,13 +119,11 @@ def require_auth(f: Callable) -> Callable:
     @functools.wraps(f)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         if not getattr(g, "claims", None):
-            return jsonify(
-                {
-                    "type": "https://coresdk.io/errors/forbidden",
-                    "title": "Forbidden",
-                    "status": 403,
-                }
-            ), 403
+            return _problem_response({
+                "type": "https://coresdk.io/errors/forbidden",
+                "title": "Forbidden",
+                "status": 403,
+            }, 403)
         return f(*args, **kwargs)
 
     return wrapper

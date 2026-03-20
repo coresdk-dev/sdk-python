@@ -38,6 +38,21 @@ allowed = sdk.evaluate_policy("data.authz.allow", {
 })
 ```
 
+## Authorize requests
+
+```python
+from coresdk import SDK
+
+sdk = SDK.from_env()
+
+# Authorize a token against a resource + action
+decision = sdk.authorize("eyJ...", action="read", resource="/orders")
+if decision.allowed:
+    print(f"Allowed for {decision.claims['sub']}")
+else:
+    print(f"Denied: {decision.reason}")
+```
+
 ## FastAPI middleware
 
 ```python

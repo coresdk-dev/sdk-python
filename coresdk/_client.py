@@ -7,7 +7,7 @@ from pathlib import Path
 import grpc
 
 from coresdk._config import SDKConfig
-from coresdk._types import AuthDecision
+from coresdk._types import AuthDecision, Claims
 from coresdk.errors._rfc9457 import ProblemDetailError
 
 logger = logging.getLogger(__name__)
@@ -131,7 +131,7 @@ class CoreSDKClient:
         if channel is None:
             return AuthDecision(
                 allowed=True,
-                claims={"sub": "unknown", "roles": []},
+                claims=Claims(sub="unknown", tenant_id=self.config.tenant_id, roles=[], exp=0),
                 reason="fail-open",
             )
         try:
@@ -160,7 +160,7 @@ class CoreSDKClient:
 
             return AuthDecision(
                 allowed=allowed,
-                claims={"sub": subject, "tenant_id": tenant, "roles": roles},
+                claims=Claims(sub=subject, tenant_id=tenant, roles=roles, exp=0),
                 reason=reason,
             )
         except grpc.RpcError as e:
@@ -168,7 +168,7 @@ class CoreSDKClient:
                 logger.warning("Auth RPC failed, failing open: %s", e)
                 return AuthDecision(
                     allowed=True,
-                    claims={"sub": "unknown", "roles": []},
+                    claims=Claims(sub="unknown", tenant_id=self.config.tenant_id, roles=[], exp=0),
                     reason="fail-open",
                 )
             raise ProblemDetailError(
@@ -190,7 +190,7 @@ class CoreSDKClient:
                 + _encode_string(3, self.config.tenant_id)
             )
             stub = channel.unary_unary(
-                "/coresdk.v1.PolicyService/EvaluatePolicy",
+                "/coresdk.v1.PolicyService/Evaluate",
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )

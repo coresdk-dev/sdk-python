@@ -2,7 +2,7 @@
 
 from coresdk._client import CoreSDKClient
 from coresdk._config import SDKConfig
-from coresdk._types import AuthDecision
+from coresdk._types import AuthDecision, Claims
 from coresdk.errors._rfc9457 import ProblemDetailError
 from coresdk.middleware.django import CoreSDKMiddleware as DjangoMiddleware
 from coresdk.middleware.flask import CoreSDKFlask, require_auth
@@ -11,6 +11,7 @@ from coresdk.tracing.decorator import trace
 __all__ = [
     "SDK",
     "AuthDecision",
+    "Claims",
     "CoreSDKFlask",
     "DjangoMiddleware",
     "ProblemDetailError",

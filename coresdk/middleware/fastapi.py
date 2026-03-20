@@ -100,7 +100,8 @@ try:
                         media_type="application/problem+json",
                     )
                 request.state.coresdk_tenant = (
-                    claims.get("tenant_id", "") if isinstance(claims, dict) else ""
+                    claims.get("tenant_id", "") if isinstance(claims, dict)
+                    else getattr(claims, "tenant_id", "")
                 )
             except Exception as e:
                 if self.sdk.config.fail_mode == "open":

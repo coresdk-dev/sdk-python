@@ -1,0 +1,115 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write  # for PyPI trusted publishing
+
+jobs:
+  # ── Build wheel + sdist ───────────────────────────────────────────────────
+  build:
+    name: Build distribution
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: pip install build
+
+      - name: Build wheel and sdist
+        run: python -m build
+
+      - name: Verify wheel installs cleanly
+        run: |
+          pip install dist/*.whl
+          python -c "import coresdk; print('coresdk', coresdk.__version__)"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  # ── GitHub Release with wheel attached ───────────────────────────────────
+  github-release:
+    name: GitHub Release
+    runs-on: ubuntu-latest
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF_NAME#v}" >> $GITHUB_OUTPUT
+
+      - name: Create release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: CoreSDK Python SDK v${{ steps.version.outputs.version }}
+          body: |
+            ## CoreSDK Python SDK v${{ steps.version.outputs.version }}
+
+            Python SDK for CoreSDK — auth, policy, observability. One import.
+
+            ### Install from PyPI
+            ```bash
+            pip install coresdk
+            ```
+
+            ### Install with framework extras
+            ```bash
+            pip install "coresdk[fastapi]"
+            pip install "coresdk[flask]"
+            ```
+
+            ### Quickstart
+            ```python
+            from coresdk import CoreSDKClient, SDKConfig
+
+            sdk = CoreSDKClient(SDKConfig(
+                sidecar_addr="[::1]:50051",
+                tenant_id="my-company",
+                service_name="my-api",
+            ))
+
+            decision = sdk.validate_token("my-token", action="read", resource="reports/q4")
+            print(decision.allowed, decision.claims)
+            ```
+
+            ### Requirements
+            - Python 3.9+
+            - CoreSDK sidecar running locally (`coresdk-sidecar`)
+
+            See the [examples repo](https://github.com/coresdk-dev/examples) for full integration patterns.
+          files: dist/*
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}
+
+  # ── Publish to PyPI (trusted publisher — no token needed) ────────────────
+  pypi:
+    name: Publish to PyPI
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: pypi
+      url: https://pypi.org/p/coresdk
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1

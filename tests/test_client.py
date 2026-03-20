@@ -47,8 +47,9 @@ def test_validate_token_fail_open_claims_are_safe():
     client = CoreSDKClient(_unreachable_config("open"))
     decision = client.validate_token("tok")
 
-    assert "sub" in decision.claims
-    assert "roles" in decision.claims
+    assert decision.claims is not None
+    assert hasattr(decision.claims, "sub")
+    assert hasattr(decision.claims, "roles")
 
 
 def test_evaluate_policy_fail_open_returns_true():

@@ -3,7 +3,7 @@
 import re
 from typing import Any, ClassVar
 
-from coresdk._types import AuthDecision
+from coresdk._types import AuthDecision, Claims
 
 
 class MockSDK:
@@ -17,7 +17,7 @@ class MockSDK:
         fail_mode: str = "open",
     ) -> None:
         self.default_allow = default_allow
-        self.default_claims = default_claims or {"sub": "test-user", "roles": ["user"]}
+        self.default_claims = default_claims or Claims(sub="test-user", tenant_id="", roles=["user"], exp=0)
         self.fail_mode = fail_mode
         self.authorize_calls: list[dict] = []
         self.policy_calls: list[dict] = []
@@ -30,16 +30,17 @@ class MockSDK:
 
     def set_token_rejected(self, token: str, reason: str = "rejected") -> None:
         """Make a specific token return allowed=False."""
-        self.set_token_decision(token, AuthDecision(allowed=False, claims={}, reason=reason))
+        self.set_token_decision(token, AuthDecision(allowed=False, claims=None, reason=reason))
 
     def authorize(self, token: str, **kwargs: Any) -> AuthDecision:  # noqa: ANN401
         self.authorize_calls.append({"token": token, **kwargs})
         overrides = getattr(self, "_token_overrides", {})
         if token in overrides:
             return overrides[token]  # type: ignore[no-any-return]
+        claims = self.default_claims if self.default_allow else None
         return AuthDecision(
             allowed=self.default_allow,
-            claims=self.default_claims.copy(),
+            claims=claims,
             reason="" if self.default_allow else "denied-by-mock",
         )
 

@@ -96,11 +96,11 @@ try:
 except ImportError:
 
     class PIIMaskingSpanProcessor:  # type: ignore[no-redef]
-        def on_start(self, span: Any, parent_context: Any = None) -> None:
-            pass  # noqa: ANN401
+        def on_start(self, span: object, parent_context: object = None) -> None:
+            pass
 
-        def on_end(self, span: Any) -> None:
-            pass  # noqa: ANN401
+        def on_end(self, span: object) -> None:
+            pass
 
         def shutdown(self) -> None:
             pass

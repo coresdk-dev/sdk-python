@@ -22,7 +22,14 @@ dependencies = [
 fastapi = ["fastapi>=0.100.0", "starlette>=0.27.0"]
 flask = ["flask>=2.3.0"]
 django = ["django>=4.2.0"]
-dev = ["pytest>=7.0", "pytest-asyncio>=0.21", "httpx>=0.24"]
+dev = [
+    "pytest>=7.0",
+    "pytest-asyncio>=0.21",
+    "httpx>=0.24",
+    "ruff>=0.4.0",
+    "mypy>=1.8.0",
+    "bandit>=1.7.0",
+]
 
 [project.entry-points."pytest11"]
 coresdk = "coresdk.pytest_plugin"
@@ -34,3 +41,58 @@ asyncio_mode = "auto"
 # Run: pip-audit --requirement requirements.txt
 # CI: pip-audit is run as part of the security gate before release.
 # Tracked issues: none open.
+
+[tool.bandit]
+skips = ["B101"]  # assert_used — OK in tests
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["coresdk", "tests"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+    "S",   # bandit (security)
+    "T20", # no print statements
+    "RUF", # ruff-specific
+    "N",   # pep8-naming
+    "ANN", # type annotations (ANN001-ANN003)
+    "PTH", # use pathlib
+    "SIM", # simplify
+]
+ignore = [
+    "S101",   # allow assert in tests
+    "S603",   # subprocess without shell=True is fine
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101", "ANN", "T20"]
+"**/middleware/*.py" = ["ANN"]  # middleware has complex type signatures
+
+[tool.ruff.lint.isort]
+known-first-party = ["coresdk"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore_missing_imports = true
+disallow_untyped_defs = true
+warn_return_any = true
+warn_unused_ignores = true
+# Gradually tighten — enable these as type coverage improves:
+# strict = true
+# disallow_any_generics = true
+exclude = ["tests/"]
+
+# Middleware modules wrap untyped third-party libs (grpc, fastapi, flask, django)
+[[tool.mypy.overrides]]
+module = ["coresdk.middleware.*"]
+disallow_untyped_defs = false
+warn_return_any = false
+warn_unused_ignores = false

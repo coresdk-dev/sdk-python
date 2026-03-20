@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import contextlib
 import logging
-from typing import Callable
-
-logger = logging.getLogger(__name__)
+from collections.abc import Callable
 
 from coresdk.errors._rfc9457 import ProblemDetailError
+
+logger = logging.getLogger(__name__)
 
 try:
     from django.http import HttpRequest, HttpResponse, JsonResponse
@@ -69,7 +69,9 @@ class CoreSDKMiddleware:
 
         with _span_ctx("coresdk.auth") as span:
             try:
-                decision = self.sdk.authorize_sync(token, action=request.method, resource=request.path)
+                decision = self.sdk.authorize_sync(
+                    token, action=request.method, resource=request.path
+                )
                 if decision.reason == "fail-open":
                     request.coresdk_claims = None  # type: ignore[attr-defined]
                 else:
@@ -77,12 +79,12 @@ class CoreSDKMiddleware:
                     tenant_id = decision.claims.get("tenant_id", "")
                     if span and tenant_id:
                         span.set_attribute("coresdk.tenant_id", tenant_id)
-                if span and _StatusCode:
+                if span and _StatusCode:  # type: ignore[truthy-function]
                     span.set_status(_StatusCode.OK)
             except ProblemDetailError as exc:
                 if span:
                     span.record_exception(exc)
-                    if _StatusCode:
+                    if _StatusCode:  # type: ignore[truthy-function]
                         span.set_status(_StatusCode.ERROR)
                 return JsonResponse(
                     exc.to_dict(),
@@ -92,7 +94,7 @@ class CoreSDKMiddleware:
             except Exception as exc:
                 if span:
                     span.record_exception(exc)
-                    if _StatusCode:
+                    if _StatusCode:  # type: ignore[truthy-function]
                         span.set_status(_StatusCode.ERROR)
                 logger.warning(
                     "CoreSDK auth error (fail-open): %s", type(exc).__name__, exc_info=True

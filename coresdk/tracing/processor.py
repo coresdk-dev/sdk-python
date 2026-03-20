@@ -18,7 +18,7 @@ _BEARER_RE = re.compile(r"Bearer\s+\S+", re.IGNORECASE)
 _APIKEY_RE = re.compile(r"\bsk-[A-Za-z0-9]{8,}\b")
 
 
-def mask_value(value: Any) -> Any:
+def mask_value(value: Any) -> Any:  # noqa: ANN401
     if not isinstance(value, str):
         return value
     if _JWT_RE.search(value) or _BEARER_RE.search(value) or _APIKEY_RE.search(value):
@@ -40,7 +40,6 @@ def mask_attributes(attributes: dict) -> dict:
 
 try:
     from opentelemetry.sdk.trace import ReadableSpan, Span
-    from opentelemetry.context import Context
 
     class PIIMaskingSpanProcessor:
         """OTel SpanProcessor that redacts PII before export.
@@ -49,25 +48,24 @@ try:
         so masking fires before the export queue.
         """
 
-        def on_start(self, span: Span, parent_context: Any = None) -> None:
+        def on_start(self, span: Span, parent_context: Any = None) -> None:  # noqa: ANN401
             pass
 
         def on_end(self, span: ReadableSpan) -> None:
-            if span.attributes:
-                if hasattr(span, "_attributes") and span._attributes:
+            if span.attributes and hasattr(span, "_attributes") and span._attributes:
                     masked = mask_attributes(dict(span._attributes))
-                    span._attributes.clear()
-                    span._attributes.update(masked)
+                    span._attributes.clear()  # type: ignore[attr-defined]
+                    span._attributes.update(masked)  # type: ignore[attr-defined]
 
             # Issue #41: also mask span event messages/attributes
             if hasattr(span, "_events") and span._events:
                 for event in span._events:
                     if hasattr(event, "attributes") and event.attributes:
                         masked = mask_attributes(dict(event.attributes))
-                        try:
+                        import contextlib
+                        # immutable attributes — acceptable limitation
+                        with contextlib.suppress(Exception):
                             event._attributes = masked
-                        except Exception:
-                            pass  # immutable attributes — acceptable limitation
 
         def shutdown(self) -> None:
             pass
@@ -76,8 +74,8 @@ try:
             return True
 
 except ImportError:
-    class PIIMaskingSpanProcessor:  # type: ignore
-        def on_start(self, span, parent_context=None): pass
-        def on_end(self, span): pass
-        def shutdown(self): pass
-        def force_flush(self, timeout_millis=30000): return True
+    class PIIMaskingSpanProcessor:  # type: ignore[no-redef]
+        def on_start(self, span: Any, parent_context: Any = None) -> None: pass  # noqa: ANN401
+        def on_end(self, span: Any) -> None: pass  # noqa: ANN401
+        def shutdown(self) -> None: pass
+        def force_flush(self, timeout_millis: int = 30000) -> bool: return True

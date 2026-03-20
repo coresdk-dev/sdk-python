@@ -1,6 +1,6 @@
 """RFC 9457 ProblemDetail error type."""
 import json
-from typing import Any, Optional
+from typing import Any
 
 
 class ProblemDetailError(Exception):
@@ -11,11 +11,11 @@ class ProblemDetailError(Exception):
         self,
         title: str,
         status: int,
-        detail: Optional[str] = None,
-        type_uri: Optional[str] = None,
-        instance: Optional[str] = None,
-        **extensions: Any,
-    ):
+        detail: str | None = None,
+        type_uri: str | None = None,
+        instance: str | None = None,
+        **extensions: Any,  # noqa: ANN401
+    ) -> None:
         self.title = title
         self.status = status
         self.detail = detail

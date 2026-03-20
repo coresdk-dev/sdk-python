@@ -1,5 +1,5 @@
 """Test PII masking in spans."""
-from coresdk.tracing.processor import mask_attributes, mask_value, REDACTED
+from coresdk.tracing.processor import REDACTED, mask_attributes, mask_value
 
 
 def test_masks_password_field():

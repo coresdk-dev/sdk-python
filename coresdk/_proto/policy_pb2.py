@@ -4,9 +4,8 @@ Replace with buf-generated code when protoc/buf CLI is available.
 Message shapes mirror proto/coresdk/v1/policy.proto exactly.
 """
 import dataclasses
-from typing import Optional
 
-from .auth_pb2 import TenantContext, RequestMetadata, ProblemDetail
+from .auth_pb2 import ProblemDetail, RequestMetadata, TenantContext
 
 
 @dataclasses.dataclass
@@ -14,8 +13,8 @@ class PolicyEvaluateRequest:
     """Mirrors coresdk.v1.PolicyEvaluateRequest."""
     rule: str = ""          # e.g. "data.authz.allow"
     input_json: str = ""    # JSON-encoded input document
-    tenant: Optional[TenantContext] = None
-    metadata: Optional[RequestMetadata] = None
+    tenant: TenantContext | None = None
+    metadata: RequestMetadata | None = None
 
 
 @dataclasses.dataclass
@@ -24,13 +23,13 @@ class PolicyEvaluateResponse:
     result: bool = False
     reason: str = ""
     dry_run: bool = False
-    error: Optional[ProblemDetail] = None
+    error: ProblemDetail | None = None
 
 
 @dataclasses.dataclass
 class WatchPolicyUpdatesRequest:
     """Mirrors coresdk.v1.WatchPolicyUpdatesRequest."""
-    tenant: Optional[TenantContext] = None
+    tenant: TenantContext | None = None
     last_bundle_version: str = ""
 
 

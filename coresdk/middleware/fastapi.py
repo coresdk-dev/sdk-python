@@ -1,12 +1,12 @@
 """FastAPI middleware adapter — JWT auth + span creation + RFC 9457 errors."""
 import logging
-from typing import Callable, Optional
+from collections.abc import Callable
 
 logger = logging.getLogger(__name__)
 
 
 try:
-    from fastapi import Depends, HTTPException, Request, Response
+    from fastapi import Depends, HTTPException, Request
     from fastapi.responses import JSONResponse
     from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
     from starlette.middleware.base import BaseHTTPMiddleware
@@ -23,7 +23,7 @@ try:
                 return {"sub": claims["sub"]}
         """
         async def _dependency(
-            credentials: Optional[HTTPAuthorizationCredentials] = Depends(_bearer_scheme),
+            credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),  # noqa: B008
         ) -> dict:
             if credentials is None:
                 raise HTTPException(
@@ -53,7 +53,7 @@ try:
     class CoreSDKMiddleware(BaseHTTPMiddleware):
         """FastAPI middleware: validates JWT, attaches user context, creates OTel span."""
 
-        def __init__(self, app, sdk, *, exclude_paths: Optional[list] = None):
+        def __init__(self, app, sdk, *, exclude_paths: list | None = None):
             super().__init__(app)
             self.sdk = sdk
             self.exclude_paths = exclude_paths or ["/healthz", "/readyz", "/metrics"]

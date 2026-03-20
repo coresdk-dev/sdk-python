@@ -5,7 +5,6 @@ Message shapes mirror proto/coresdk/v1/auth.proto and
 proto/coresdk/v1/common.proto exactly.
 """
 import dataclasses
-from typing import Dict, List, Optional
 
 
 @dataclasses.dataclass
@@ -16,7 +15,7 @@ class ProblemDetail:
     status: int = 0
     detail: str = ""
     instance: str = ""
-    extensions: Dict[str, str] = dataclasses.field(default_factory=dict)
+    extensions: dict[str, str] = dataclasses.field(default_factory=dict)
 
 
 @dataclasses.dataclass
@@ -24,8 +23,8 @@ class TenantContext:
     """Mirrors coresdk.v1.TenantContext."""
     tenant_id: str = ""
     tenant_name: str = ""
-    roles: List[str] = dataclasses.field(default_factory=list)
-    attributes: Dict[str, str] = dataclasses.field(default_factory=dict)
+    roles: list[str] = dataclasses.field(default_factory=list)
+    attributes: dict[str, str] = dataclasses.field(default_factory=dict)
 
 
 @dataclasses.dataclass
@@ -41,8 +40,8 @@ class RequestMetadata:
 class ValidateTokenRequest:
     """Mirrors coresdk.v1.ValidateTokenRequest."""
     token: str = ""
-    tenant: Optional[TenantContext] = None
-    metadata: Optional[RequestMetadata] = None
+    tenant: TenantContext | None = None
+    metadata: RequestMetadata | None = None
     expected_audience: str = ""
 
 
@@ -51,10 +50,10 @@ class ValidateTokenResponse:
     """Mirrors coresdk.v1.ValidateTokenResponse."""
     valid: bool = False
     subject: str = ""
-    roles: List[str] = dataclasses.field(default_factory=list)
-    claims: Dict[str, str] = dataclasses.field(default_factory=dict)
+    roles: list[str] = dataclasses.field(default_factory=list)
+    claims: dict[str, str] = dataclasses.field(default_factory=dict)
     expires_at: int = 0
-    error: Optional[ProblemDetail] = None
+    error: ProblemDetail | None = None
 
 
 @dataclasses.dataclass
@@ -63,9 +62,9 @@ class AuthorizeRequest:
     subject: str = ""
     action: str = ""
     resource: str = ""
-    tenant: Optional[TenantContext] = None
-    metadata: Optional[RequestMetadata] = None
-    context: Dict[str, str] = dataclasses.field(default_factory=dict)
+    tenant: TenantContext | None = None
+    metadata: RequestMetadata | None = None
+    context: dict[str, str] = dataclasses.field(default_factory=dict)
 
 
 @dataclasses.dataclass
@@ -73,13 +72,13 @@ class AuthorizeResponse:
     """Mirrors coresdk.v1.AuthorizeResponse."""
     allowed: bool = False
     reason: str = ""
-    error: Optional[ProblemDetail] = None
+    error: ProblemDetail | None = None
 
 
 @dataclasses.dataclass
 class GetJwksRequest:
     """Mirrors coresdk.v1.GetJwksRequest."""
-    tenant: Optional[TenantContext] = None
+    tenant: TenantContext | None = None
 
 
 @dataclasses.dataclass

@@ -1,9 +1,12 @@
 """pytest plugin for CoreSDK — fixtures for testing SDK-instrumented code."""
 from __future__ import annotations
 
+from collections.abc import Generator
+from typing import Any
+
 import pytest
 
-from coresdk.testing import MockSDK, FakeSpanExporter, assert_no_pii
+from coresdk.testing import FakeSpanExporter, MockSDK, assert_no_pii
 
 
 @pytest.fixture
@@ -32,7 +35,7 @@ def coresdk_deny() -> MockSDK:
 
 
 @pytest.fixture
-def coresdk_spans():
+def coresdk_spans() -> Generator[Any, None, None]:
     """Provides an in-memory span exporter for asserting OTel spans.
 
     Requires opentelemetry-sdk. Skips if not installed.
@@ -44,10 +47,10 @@ def coresdk_spans():
             assert_no_pii(spans)
     """
     try:
-        from opentelemetry.sdk.trace import TracerProvider
-        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
-        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
         from opentelemetry import trace
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import SimpleSpanProcessor
+        from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
     except ImportError:
         pytest.skip("opentelemetry-sdk not installed")
         return
@@ -66,7 +69,7 @@ def coresdk_spans():
 
 
 @pytest.fixture
-def assert_no_pii_fixture(coresdk_spans):
+def assert_no_pii_fixture(coresdk_spans: Any) -> Generator[None, None, None]:  # noqa: ANN401
     """Automatically asserts no PII in all finished spans after each test."""
     yield
     spans = coresdk_spans.get_finished_spans()

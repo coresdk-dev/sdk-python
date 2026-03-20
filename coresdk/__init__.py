@@ -1,16 +1,21 @@
 """CoreSDK — auth, policy, observability. One import."""
 
-from coresdk._config import SDKConfig
 from coresdk._client import CoreSDKClient
+from coresdk._config import SDKConfig
 from coresdk._types import AuthDecision
 from coresdk.errors._rfc9457 import ProblemDetailError
-from coresdk.tracing.decorator import trace
-from coresdk.middleware.flask import CoreSDKFlask, require_auth
 from coresdk.middleware.django import CoreSDKMiddleware as DjangoMiddleware
+from coresdk.middleware.flask import CoreSDKFlask, require_auth
+from coresdk.tracing.decorator import trace
 
 __all__ = [
-    "SDK", "AuthDecision", "trace", "ProblemDetailError",
-    "CoreSDKFlask", "require_auth", "DjangoMiddleware",
+    "SDK",
+    "AuthDecision",
+    "CoreSDKFlask",
+    "DjangoMiddleware",
+    "ProblemDetailError",
+    "require_auth",
+    "trace",
 ]
 __version__ = "0.1.0"
 
@@ -18,7 +23,7 @@ __version__ = "0.1.0"
 class SDK:
     """Main CoreSDK entry point. Initialize with SDK.from_env()."""
 
-    def __init__(self, config: SDKConfig):
+    def __init__(self, config: SDKConfig) -> None:
         self.config = config
         self._client = CoreSDKClient(config)
 

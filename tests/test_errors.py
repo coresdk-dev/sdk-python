@@ -1,5 +1,6 @@
 """Test RFC 9457 ProblemDetailError."""
 import json
+
 from coresdk.errors._rfc9457 import ProblemDetailError
 
 

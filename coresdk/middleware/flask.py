@@ -2,12 +2,13 @@
 from __future__ import annotations
 
 import functools
-from typing import Any, Callable, Optional
+from collections.abc import Callable
+from typing import Any
 
 from coresdk.errors._rfc9457 import ProblemDetailError
 
 try:
-    from flask import Flask, g, request, jsonify
+    from flask import g, jsonify, request
     _flask_available = True
 except ImportError:
     _flask_available = False
@@ -38,7 +39,9 @@ class CoreSDKFlask:
             return None
 
         auth_header = request.headers.get("Authorization", "")
-        token = auth_header.removeprefix("Bearer ").strip() if auth_header.startswith("Bearer ") else ""
+        token = (
+            auth_header.removeprefix("Bearer ").strip() if auth_header.startswith("Bearer ") else ""
+        )
 
         if not token:
             return jsonify({
@@ -60,25 +63,27 @@ class CoreSDKFlask:
 
         with _span_ctx() as span:
             try:
-                decision = self.sdk.authorize_sync(token, action=request.method, resource=request.path)
+                decision = self.sdk.authorize_sync(
+                    token, action=request.method, resource=request.path
+                )
                 if decision.reason == "fail-open":
-                    if span and _StatusCode:
+                    if span and _StatusCode:  # type: ignore[truthy-function]
                         span.set_status(_StatusCode.OK)
                     g.claims = None
                 else:
                     g.claims = decision.claims
-                    if span and _StatusCode:
+                    if span and _StatusCode:  # type: ignore[truthy-function]
                         span.set_status(_StatusCode.OK)
             except ProblemDetailError as exc:
                 if span:
                     span.record_exception(exc)
-                    if _StatusCode:
+                    if _StatusCode:  # type: ignore[truthy-function]
                         span.set_status(_StatusCode.ERROR)
                 return jsonify(exc.to_dict()), exc.status
             except Exception as exc:
                 if span:
                     span.record_exception(exc)
-                    if _StatusCode:
+                    if _StatusCode:  # type: ignore[truthy-function]
                         span.set_status(_StatusCode.ERROR)
                 g.claims = None
 

@@ -1,7 +1,7 @@
 """gRPC client for CoreSDK sidecar — manual protobuf encoding, no protoc required."""
 import json
 import logging
-import struct
+from pathlib import Path
 
 import grpc
 
@@ -91,11 +91,11 @@ def _field_bool(fields: dict, num: int) -> bool:
 class CoreSDKClient:
     """Lazy gRPC channel to sidecar. Fail-open when sidecar unreachable in dev mode."""
 
-    def __init__(self, config: SDKConfig):
+    def __init__(self, config: SDKConfig) -> None:
         self.config = config
         self._channel = None
 
-    def _get_channel(self):
+    def _get_channel(self) -> grpc.Channel | None:
         if self._channel is None:
             try:
                 options = [
@@ -108,11 +108,11 @@ class CoreSDKClient:
                         self.config.sidecar_addr, options=options
                     )
                 else:
-                    with open(self.config.tls_cert, "rb") as f:
+                    with Path(self.config.tls_cert).open("rb") as f:
                         cert = f.read()
-                    with open(self.config.tls_key, "rb") as f:
+                    with Path(self.config.tls_key).open("rb") as f:
                         key = f.read()
-                    with open(self.config.tls_ca, "rb") as f:
+                    with Path(self.config.tls_ca).open("rb") as f:
                         ca = f.read()
                     creds = grpc.ssl_channel_credentials(ca, key, cert)
                     self._channel = grpc.secure_channel(
@@ -178,7 +178,7 @@ class CoreSDKClient:
                 status=401,
                 detail=str(e),
                 type_uri="https://coresdk.io/errors/unauthorized",
-            )
+            ) from e
 
     def evaluate_policy(self, rule: str, input_data: dict) -> bool:
         channel = self._get_channel()
@@ -210,4 +210,4 @@ class CoreSDKClient:
                 status=500,
                 detail=str(e),
                 type_uri="https://coresdk.io/errors/policy",
-            )
+            ) from e

@@ -1,8 +1,11 @@
 """Middleware integration tests — FastAPI, Flask require_auth, assert_no_pii."""
-import pytest
-from coresdk.testing._mock import MockSDK, FakeSpanExporter, assert_no_pii
-from coresdk._types import AuthDecision
+from __future__ import annotations
 
+from typing import Any, ClassVar
+
+import pytest
+
+from coresdk.testing._mock import MockSDK, assert_no_pii
 
 # ---------------------------------------------------------------------------
 # FastAPI middleware tests
@@ -15,6 +18,7 @@ def fastapi_app():
     pytest.importorskip("httpx")
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
+
     from coresdk.middleware.fastapi import CoreSDKMiddleware
 
     sdk = MockSDK(default_claims={"sub": "alice", "roles": ["admin"]})
@@ -42,10 +46,8 @@ def test_fastapi_middleware_rejects_missing_token_in_strict_mode():
     pytest.importorskip("httpx")
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
+
     from coresdk.middleware.fastapi import CoreSDKMiddleware
-    from coresdk._config import SDKConfig
-    from coresdk._client import CoreSDKClient
-    import coresdk as _sdk_mod
 
     sdk = MockSDK()
     sdk.config = type("C", (), {"fail_mode": "closed", "dev_mode": False, "tenant_id": "t"})()
@@ -68,8 +70,9 @@ def test_fastapi_require_auth_dependency_allowed():
     """require_auth dependency passes through when token is valid."""
     pytest.importorskip("fastapi")
     pytest.importorskip("httpx")
-    from fastapi import FastAPI, Depends
+    from fastapi import Depends, FastAPI
     from fastapi.testclient import TestClient
+
     from coresdk.middleware.fastapi import require_auth
 
     sdk = MockSDK(default_claims={"sub": "bob", "roles": ["viewer"]})
@@ -77,7 +80,7 @@ def test_fastapi_require_auth_dependency_allowed():
     app = FastAPI()
 
     @app.get("/protected")
-    async def protected(claims=Depends(require_auth(sdk))):
+    async def protected(claims=Depends(require_auth(sdk))):  # noqa: B008
         return {"sub": claims["sub"]}
 
     client = TestClient(app, raise_server_exceptions=False)
@@ -90,8 +93,9 @@ def test_fastapi_require_auth_dependency_rejected():
     """require_auth dependency returns 403 when token is denied."""
     pytest.importorskip("fastapi")
     pytest.importorskip("httpx")
-    from fastapi import FastAPI, Depends
+    from fastapi import Depends, FastAPI
     from fastapi.testclient import TestClient
+
     from coresdk.middleware.fastapi import require_auth
 
     sdk = MockSDK()
@@ -100,7 +104,7 @@ def test_fastapi_require_auth_dependency_rejected():
     app = FastAPI()
 
     @app.get("/protected")
-    async def protected(claims=Depends(require_auth(sdk))):
+    async def protected(claims=Depends(require_auth(sdk))):  # noqa: B008
         return {"sub": claims["sub"]}
 
     client = TestClient(app, raise_server_exceptions=False)
@@ -116,6 +120,7 @@ def test_flask_require_auth_rejects_missing_token():
     """Flask CoreSDKFlask returns 401 RFC 9457 when Authorization is absent."""
     pytest.importorskip("flask")
     from flask import Flask
+
     from coresdk.middleware.flask import CoreSDKFlask
 
     sdk = MockSDK()
@@ -138,6 +143,7 @@ def test_flask_require_auth_passes_with_token():
     """Flask middleware allows requests with a Bearer token."""
     pytest.importorskip("flask")
     from flask import Flask
+
     from coresdk.middleware.flask import CoreSDKFlask
 
     sdk = MockSDK(default_claims={"sub": "carol"})
@@ -161,7 +167,9 @@ def test_assert_no_pii_catches_email():
     """assert_no_pii raises AssertionError when a span attribute contains an email."""
 
     class FakeSpan:
-        attributes = {"user_info": "contact us at alice@example.com for support"}
+        attributes: ClassVar[dict[str, Any]] = {
+            "user_info": "contact us at alice@example.com for support"
+        }
 
     with pytest.raises(AssertionError, match="PII detected"):
         assert_no_pii([FakeSpan()])
@@ -171,7 +179,7 @@ def test_assert_no_pii_catches_ssn():
     """assert_no_pii raises AssertionError when a span attribute contains a SSN."""
 
     class FakeSpan:
-        attributes = {"note": "ssn is 123-45-6789"}
+        attributes: ClassVar[dict[str, Any]] = {"note": "ssn is 123-45-6789"}
 
     with pytest.raises(AssertionError, match="PII detected"):
         assert_no_pii([FakeSpan()])
@@ -181,6 +189,8 @@ def test_assert_no_pii_passes_clean_span():
     """assert_no_pii does not raise for clean span attributes."""
 
     class FakeSpan:
-        attributes = {"route": "/api/users", "method": "GET", "status": "200"}
+        attributes: ClassVar[dict[str, Any]] = {
+            "route": "/api/users", "method": "GET", "status": "200"
+        }
 
     assert_no_pii([FakeSpan()])  # must not raise

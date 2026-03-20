@@ -1,6 +1,6 @@
 """MockSDK, FakeSpanExporter, assert_no_pii — no sidecar needed for tests."""
 import re
-from typing import Any, Dict, List
+from typing import Any, ClassVar
 
 from coresdk._types import AuthDecision
 
@@ -12,14 +12,14 @@ class MockSDK:
         self,
         *,
         default_allow: bool = True,
-        default_claims: Dict[str, Any] | None = None,
+        default_claims: dict[str, Any] | None = None,
         fail_mode: str = "open",
-    ):
+    ) -> None:
         self.default_allow = default_allow
         self.default_claims = default_claims or {"sub": "test-user", "roles": ["user"]}
         self.fail_mode = fail_mode
-        self.authorize_calls: List[dict] = []
-        self.policy_calls: List[dict] = []
+        self.authorize_calls: list[dict] = []
+        self.policy_calls: list[dict] = []
 
     def set_token_decision(self, token: str, decision: AuthDecision) -> None:
         """Override the AuthDecision returned for a specific token."""
@@ -31,18 +31,18 @@ class MockSDK:
         """Make a specific token return allowed=False."""
         self.set_token_decision(token, AuthDecision(allowed=False, claims={}, reason=reason))
 
-    def authorize(self, token: str, **kwargs) -> AuthDecision:
+    def authorize(self, token: str, **kwargs: Any) -> AuthDecision:  # noqa: ANN401
         self.authorize_calls.append({"token": token, **kwargs})
         overrides = getattr(self, "_token_overrides", {})
         if token in overrides:
-            return overrides[token]
+            return overrides[token]  # type: ignore[no-any-return]
         return AuthDecision(
             allowed=self.default_allow,
             claims=self.default_claims.copy(),
             reason="" if self.default_allow else "denied-by-mock",
         )
 
-    def authorize_sync(self, token: str, **kwargs) -> AuthDecision:
+    def authorize_sync(self, token: str, **kwargs: Any) -> AuthDecision:  # noqa: ANN401
         return self.authorize(token, **kwargs)
 
     def evaluate_policy(self, rule: str, input_data: dict) -> bool:
@@ -53,10 +53,10 @@ class MockSDK:
         return True
 
     class _MockConfig:
-        fail_mode = "open"
-        dev_mode = True
-        tenant_id = "test"
-        service_name = "test-service"
+        fail_mode: ClassVar[str] = "open"
+        dev_mode: ClassVar[bool] = True
+        tenant_id: ClassVar[str] = "test"
+        service_name: ClassVar[str] = "test-service"
 
     config = _MockConfig()
 
@@ -64,14 +64,14 @@ class MockSDK:
 class FakeSpanExporter:
     """Captures exported spans for test assertions."""
 
-    def __init__(self):
-        self.spans: List[Any] = []
+    def __init__(self) -> None:
+        self.spans: list[Any] = []
 
-    def export(self, spans) -> int:
+    def export(self, spans: list[Any]) -> int:
         self.spans.extend(spans)
         return 0
 
-    def get_spans(self) -> List[Any]:
+    def get_spans(self) -> list[Any]:
         return list(self.spans)
 
     def shutdown(self) -> None:
@@ -91,7 +91,7 @@ PII_PATTERNS = [
 ]
 
 
-def assert_no_pii(spans: List[Any]) -> None:
+def assert_no_pii(spans: list[Any]) -> None:
     """Assert no PII appears in span attributes. Raises AssertionError if found."""
     for span in spans:
         attrs = getattr(span, "attributes", {}) or {}

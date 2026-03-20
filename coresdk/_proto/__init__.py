@@ -1,6 +1,7 @@
 """Hand-written proto stubs for coresdk.v1.
 Replace with buf-generated code when protoc/buf CLI is available.
 """
+
 from .auth_pb2 import (
     AuthorizeRequest,
     AuthorizeResponse,

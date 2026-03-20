@@ -1,12 +1,14 @@
 """Test RFC 9457 ProblemDetailError."""
+
 import json
 
 from coresdk.errors._rfc9457 import ProblemDetailError
 
 
 def test_to_dict():
-    err = ProblemDetailError("Not Found", 404, detail="Resource missing",
-                              type_uri="https://example.com/not-found")
+    err = ProblemDetailError(
+        "Not Found", 404, detail="Resource missing", type_uri="https://example.com/not-found"
+    )
     d = err.to_dict()
     assert d["status"] == 404
     assert d["title"] == "Not Found"

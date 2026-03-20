@@ -1,12 +1,28 @@
 """PIIMaskingSpanProcessor — fires before export queue."""
+
 import re
 from typing import Any
 
-BLOCKED_FIELDS = frozenset({
-    "password", "passwd", "secret", "token", "api_key", "apikey",
-    "authorization", "auth", "private_key", "credential", "credentials",
-    "access_key", "access_token", "refresh_token", "client_secret", "ssn",
-})
+BLOCKED_FIELDS = frozenset(
+    {
+        "password",
+        "passwd",
+        "secret",
+        "token",
+        "api_key",
+        "apikey",
+        "authorization",
+        "auth",
+        "private_key",
+        "credential",
+        "credentials",
+        "access_key",
+        "access_token",
+        "refresh_token",
+        "client_secret",
+        "ssn",
+    }
+)
 
 REDACTED = "[REDACTED]"
 
@@ -53,9 +69,9 @@ try:
 
         def on_end(self, span: ReadableSpan) -> None:
             if span.attributes and hasattr(span, "_attributes") and span._attributes:
-                    masked = mask_attributes(dict(span._attributes))
-                    span._attributes.clear()  # type: ignore[attr-defined]
-                    span._attributes.update(masked)  # type: ignore[attr-defined]
+                masked = mask_attributes(dict(span._attributes))
+                span._attributes.clear()  # type: ignore[attr-defined]
+                span._attributes.update(masked)  # type: ignore[attr-defined]
 
             # Issue #41: also mask span event messages/attributes
             if hasattr(span, "_events") and span._events:
@@ -63,6 +79,7 @@ try:
                     if hasattr(event, "attributes") and event.attributes:
                         masked = mask_attributes(dict(event.attributes))
                         import contextlib
+
                         # immutable attributes — acceptable limitation
                         with contextlib.suppress(Exception):
                             event._attributes = masked
@@ -74,8 +91,16 @@ try:
             return True
 
 except ImportError:
+
     class PIIMaskingSpanProcessor:  # type: ignore[no-redef]
-        def on_start(self, span: Any, parent_context: Any = None) -> None: pass  # noqa: ANN401
-        def on_end(self, span: Any) -> None: pass  # noqa: ANN401
-        def shutdown(self) -> None: pass
-        def force_flush(self, timeout_millis: int = 30000) -> bool: return True
+        def on_start(self, span: Any, parent_context: Any = None) -> None:
+            pass  # noqa: ANN401
+
+        def on_end(self, span: Any) -> None:
+            pass  # noqa: ANN401
+
+        def shutdown(self) -> None:
+            pass
+
+        def force_flush(self, timeout_millis: int = 30000) -> bool:
+            return True

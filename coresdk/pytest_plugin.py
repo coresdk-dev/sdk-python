@@ -1,4 +1,5 @@
 """pytest plugin for CoreSDK — fixtures for testing SDK-instrumented code."""
+
 from __future__ import annotations
 
 from collections.abc import Generator

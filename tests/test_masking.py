@@ -1,4 +1,5 @@
 """Test PII masking in spans."""
+
 from coresdk.tracing.processor import REDACTED, mask_attributes, mask_value
 
 

@@ -1,4 +1,5 @@
 """Django middleware for CoreSDK — JWT auth + OTel tracing."""
+
 from __future__ import annotations
 
 import contextlib
@@ -11,12 +12,14 @@ logger = logging.getLogger(__name__)
 
 try:
     from django.http import HttpRequest, HttpResponse, JsonResponse
+
     _django_available = True
 except ImportError:
     _django_available = False
 
 try:
     from opentelemetry import trace as _otel_trace
+
     tracer = _otel_trace.get_tracer("coresdk", "0.1.0")
     _StatusCode = _otel_trace.StatusCode
 except ImportError:
@@ -43,6 +46,7 @@ class CoreSDKMiddleware:
         self.fail_mode = fail_mode
         if sdk is None:
             from coresdk import SDK
+
             sdk = SDK.from_env()
         self.sdk = sdk
 

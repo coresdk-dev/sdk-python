@@ -1,4 +1,5 @@
 """gRPC client for CoreSDK sidecar — manual protobuf encoding, no protoc required."""
+
 import json
 import logging
 from pathlib import Path
@@ -15,6 +16,7 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Minimal protobuf wire encoding helpers
 # ---------------------------------------------------------------------------
+
 
 def _varint(n: int) -> bytes:
     buf = []
@@ -63,7 +65,7 @@ def _decode_fields(data: bytes) -> dict:
             fields.setdefault(field_num, []).append(val)
         elif wire_type == 2:  # length-delimited
             length, i = _read_varint(data, i)
-            val = data[i:i + length]
+            val = data[i : i + length]
             i += length
             fields.setdefault(field_num, []).append(val)
         elif wire_type == 5:  # 32-bit
@@ -88,6 +90,7 @@ def _field_bool(fields: dict, num: int) -> bool:
 # Client
 # ---------------------------------------------------------------------------
 
+
 class CoreSDKClient:
     """Lazy gRPC channel to sidecar. Fail-open when sidecar unreachable in dev mode."""
 
@@ -104,9 +107,7 @@ class CoreSDKClient:
                     ("grpc.keepalive_permit_without_calls", True),
                 ]
                 if self.config.dev_mode or not self.config.tls_cert:
-                    self._channel = grpc.insecure_channel(
-                        self.config.sidecar_addr, options=options
-                    )
+                    self._channel = grpc.insecure_channel(self.config.sidecar_addr, options=options)
                 else:
                     with Path(self.config.tls_cert).open("rb") as f:
                         cert = f.read()
@@ -155,10 +156,7 @@ class CoreSDKClient:
             tenant = _field_str(fields, 3) or self.config.tenant_id
             reason = _field_str(fields, 5)
             # roles is repeated string at field 4
-            roles = [
-                r.decode("utf-8") if isinstance(r, bytes) else r
-                for r in fields.get(4, [])
-            ]
+            roles = [r.decode("utf-8") if isinstance(r, bytes) else r for r in fields.get(4, [])]
 
             return AuthDecision(
                 allowed=allowed,

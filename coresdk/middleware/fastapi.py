@@ -1,4 +1,5 @@
 """FastAPI middleware adapter — JWT auth + span creation + RFC 9457 errors."""
+
 import logging
 from collections.abc import Callable
 
@@ -22,6 +23,7 @@ try:
             async def handler(claims = Depends(require_auth(sdk))):
                 return {"sub": claims["sub"]}
         """
+
         async def _dependency(
             credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),  # noqa: B008
         ) -> dict:
@@ -48,6 +50,7 @@ try:
                     },
                 )
             return decision.claims
+
         return _dependency
 
     class CoreSDKMiddleware(BaseHTTPMiddleware):
@@ -72,9 +75,12 @@ try:
                     return await call_next(request)
                 return JSONResponse(
                     status_code=401,
-                    content={"type": "https://coresdk.io/errors/unauthorized",
-                             "title": "Unauthorized", "status": 401,
-                             "detail": "Missing Authorization header"},
+                    content={
+                        "type": "https://coresdk.io/errors/unauthorized",
+                        "title": "Unauthorized",
+                        "status": 401,
+                        "detail": "Missing Authorization header",
+                    },
                     media_type="application/problem+json",
                 )
 
@@ -88,15 +94,19 @@ try:
                     return await call_next(request)
                 return JSONResponse(
                     status_code=401,
-                    content={"type": "https://coresdk.io/errors/unauthorized",
-                             "title": "Unauthorized", "status": 401,
-                             "detail": str(e)},
+                    content={
+                        "type": "https://coresdk.io/errors/unauthorized",
+                        "title": "Unauthorized",
+                        "status": 401,
+                        "detail": str(e),
+                    },
                     media_type="application/problem+json",
                 )
 
             return await call_next(request)
 
 except ImportError:
+
     class CoreSDKMiddleware:  # type: ignore
         def __init__(self, *args, **kwargs):
             raise ImportError("fastapi required: pip install coresdk[fastapi]")

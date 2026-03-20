@@ -3,6 +3,7 @@ Replace with buf-generated code when protoc/buf CLI is available.
 
 Message shapes mirror proto/coresdk/v1/policy.proto exactly.
 """
+
 import dataclasses
 
 from .auth_pb2 import ProblemDetail, RequestMetadata, TenantContext
@@ -11,8 +12,9 @@ from .auth_pb2 import ProblemDetail, RequestMetadata, TenantContext
 @dataclasses.dataclass
 class PolicyEvaluateRequest:
     """Mirrors coresdk.v1.PolicyEvaluateRequest."""
-    rule: str = ""          # e.g. "data.authz.allow"
-    input_json: str = ""    # JSON-encoded input document
+
+    rule: str = ""  # e.g. "data.authz.allow"
+    input_json: str = ""  # JSON-encoded input document
     tenant: TenantContext | None = None
     metadata: RequestMetadata | None = None
 
@@ -20,6 +22,7 @@ class PolicyEvaluateRequest:
 @dataclasses.dataclass
 class PolicyEvaluateResponse:
     """Mirrors coresdk.v1.PolicyEvaluateResponse."""
+
     result: bool = False
     reason: str = ""
     dry_run: bool = False
@@ -29,6 +32,7 @@ class PolicyEvaluateResponse:
 @dataclasses.dataclass
 class WatchPolicyUpdatesRequest:
     """Mirrors coresdk.v1.WatchPolicyUpdatesRequest."""
+
     tenant: TenantContext | None = None
     last_bundle_version: str = ""
 
@@ -36,6 +40,7 @@ class WatchPolicyUpdatesRequest:
 @dataclasses.dataclass
 class PolicyBundleUpdate:
     """Mirrors coresdk.v1.PolicyBundleUpdate."""
+
     bundle_version: str = ""
     bundle_data: bytes = b""
     updated_at: int = 0

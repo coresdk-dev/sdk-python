@@ -1,4 +1,5 @@
 """MockSDK, FakeSpanExporter, assert_no_pii — no sidecar needed for tests."""
+
 import re
 from typing import Any, ClassVar
 
@@ -82,12 +83,12 @@ class FakeSpanExporter:
 
 
 PII_PATTERNS = [
-    r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}",   # email
-    r"\b\d{3}-\d{2}-\d{4}\b",                                  # SSN
-    r"\b(?:\d[ -]?){15,16}\b",                                 # credit card
-    r"Bearer\s+\S+",                                            # Bearer token
+    r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}",  # email
+    r"\b\d{3}-\d{2}-\d{4}\b",  # SSN
+    r"\b(?:\d[ -]?){15,16}\b",  # credit card
+    r"Bearer\s+\S+",  # Bearer token
     r"eyJ[A-Za-z0-9_\-]+\.eyJ[A-Za-z0-9_\-]+\.[A-Za-z0-9_\-]+",  # JWT
-    r"\bsk-[A-Za-z0-9]{8,}\b",                                 # API key (sk-*)
+    r"\bsk-[A-Za-z0-9]{8,}\b",  # API key (sk-*)
 ]
 
 

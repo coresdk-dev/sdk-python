@@ -1,10 +1,12 @@
 """RFC 9457 ProblemDetail error type."""
+
 import json
 from typing import Any
 
 
 class ProblemDetailError(Exception):
     """RFC 9457 Problem Details for HTTP APIs."""
+
     CONTENT_TYPE = "application/problem+json"
 
     def __init__(
@@ -44,13 +46,13 @@ class ProblemDetailError(Exception):
 
     @classmethod
     def unauthorized(cls, detail: str) -> "ProblemDetailError":
-        return cls("Unauthorized", 401, detail=detail,
-                   type_uri="https://coresdk.io/errors/unauthorized")
+        return cls(
+            "Unauthorized", 401, detail=detail, type_uri="https://coresdk.io/errors/unauthorized"
+        )
 
     @classmethod
     def forbidden(cls, detail: str) -> "ProblemDetailError":
-        return cls("Forbidden", 403, detail=detail,
-                   type_uri="https://coresdk.io/errors/forbidden")
+        return cls("Forbidden", 403, detail=detail, type_uri="https://coresdk.io/errors/forbidden")
 
     def __repr__(self) -> str:
         return f"ProblemDetailError(status={self.status}, title={self.title!r})"

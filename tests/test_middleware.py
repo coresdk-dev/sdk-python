@@ -1,4 +1,5 @@
 """Middleware integration tests — FastAPI, Flask require_auth, assert_no_pii."""
+
 from __future__ import annotations
 
 from typing import Any, ClassVar
@@ -10,6 +11,7 @@ from coresdk.testing._mock import MockSDK, assert_no_pii
 # ---------------------------------------------------------------------------
 # FastAPI middleware tests
 # ---------------------------------------------------------------------------
+
 
 @pytest.fixture
 def fastapi_app():
@@ -116,6 +118,7 @@ def test_fastapi_require_auth_dependency_rejected():
 # Flask require_auth tests
 # ---------------------------------------------------------------------------
 
+
 def test_flask_require_auth_rejects_missing_token():
     """Flask CoreSDKFlask returns 401 RFC 9457 when Authorization is absent."""
     pytest.importorskip("flask")
@@ -163,6 +166,7 @@ def test_flask_require_auth_passes_with_token():
 # assert_no_pii tests
 # ---------------------------------------------------------------------------
 
+
 def test_assert_no_pii_catches_email():
     """assert_no_pii raises AssertionError when a span attribute contains an email."""
 
@@ -190,7 +194,9 @@ def test_assert_no_pii_passes_clean_span():
 
     class FakeSpan:
         attributes: ClassVar[dict[str, Any]] = {
-            "route": "/api/users", "method": "GET", "status": "200"
+            "route": "/api/users",
+            "method": "GET",
+            "status": "200",
         }
 
     assert_no_pii([FakeSpan()])  # must not raise

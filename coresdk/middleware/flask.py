@@ -1,4 +1,5 @@
 """Flask middleware for CoreSDK — JWT auth + OTel tracing."""
+
 from __future__ import annotations
 
 import functools
@@ -9,12 +10,14 @@ from coresdk.errors._rfc9457 import ProblemDetailError
 
 try:
     from flask import g, jsonify, request
+
     _flask_available = True
 except ImportError:
     _flask_available = False
 
 try:
     from opentelemetry import trace as _otel_trace
+
     tracer = _otel_trace.get_tracer("coresdk", "0.1.0")
     _StatusCode = _otel_trace.StatusCode
 except ImportError:
@@ -44,12 +47,14 @@ class CoreSDKFlask:
         )
 
         if not token:
-            return jsonify({
-                "type": "https://coresdk.io/errors/unauthorized",
-                "title": "Unauthorized",
-                "status": 401,
-                "detail": "Missing Bearer token",
-            }), 401
+            return jsonify(
+                {
+                    "type": "https://coresdk.io/errors/unauthorized",
+                    "title": "Unauthorized",
+                    "status": 401,
+                    "detail": "Missing Bearer token",
+                }
+            ), 401
 
         import contextlib
 
@@ -95,13 +100,17 @@ class CoreSDKFlask:
 
 def require_auth(f: Callable) -> Callable:
     """Decorator: raise 403 if g.claims is None."""
+
     @functools.wraps(f)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         if not getattr(g, "claims", None):
-            return jsonify({
-                "type": "https://coresdk.io/errors/forbidden",
-                "title": "Forbidden",
-                "status": 403,
-            }), 403
+            return jsonify(
+                {
+                    "type": "https://coresdk.io/errors/forbidden",
+                    "title": "Forbidden",
+                    "status": 403,
+                }
+            ), 403
         return f(*args, **kwargs)
+
     return wrapper

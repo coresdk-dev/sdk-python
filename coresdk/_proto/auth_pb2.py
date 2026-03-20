@@ -4,12 +4,14 @@ Replace with buf-generated code when protoc/buf CLI is available.
 Message shapes mirror proto/coresdk/v1/auth.proto and
 proto/coresdk/v1/common.proto exactly.
 """
+
 import dataclasses
 
 
 @dataclasses.dataclass
 class ProblemDetail:
     """RFC 9457 Problem Details — mirrors coresdk.v1.ProblemDetail."""
+
     type: str = ""
     title: str = ""
     status: int = 0
@@ -21,6 +23,7 @@ class ProblemDetail:
 @dataclasses.dataclass
 class TenantContext:
     """Mirrors coresdk.v1.TenantContext."""
+
     tenant_id: str = ""
     tenant_name: str = ""
     roles: list[str] = dataclasses.field(default_factory=list)
@@ -30,6 +33,7 @@ class TenantContext:
 @dataclasses.dataclass
 class RequestMetadata:
     """Mirrors coresdk.v1.RequestMetadata."""
+
     request_id: str = ""
     trace_id: str = ""
     span_id: str = ""
@@ -39,6 +43,7 @@ class RequestMetadata:
 @dataclasses.dataclass
 class ValidateTokenRequest:
     """Mirrors coresdk.v1.ValidateTokenRequest."""
+
     token: str = ""
     tenant: TenantContext | None = None
     metadata: RequestMetadata | None = None
@@ -48,6 +53,7 @@ class ValidateTokenRequest:
 @dataclasses.dataclass
 class ValidateTokenResponse:
     """Mirrors coresdk.v1.ValidateTokenResponse."""
+
     valid: bool = False
     subject: str = ""
     roles: list[str] = dataclasses.field(default_factory=list)
@@ -59,6 +65,7 @@ class ValidateTokenResponse:
 @dataclasses.dataclass
 class AuthorizeRequest:
     """Mirrors coresdk.v1.AuthorizeRequest."""
+
     subject: str = ""
     action: str = ""
     resource: str = ""
@@ -70,6 +77,7 @@ class AuthorizeRequest:
 @dataclasses.dataclass
 class AuthorizeResponse:
     """Mirrors coresdk.v1.AuthorizeResponse."""
+
     allowed: bool = False
     reason: str = ""
     error: ProblemDetail | None = None
@@ -78,10 +86,12 @@ class AuthorizeResponse:
 @dataclasses.dataclass
 class GetJwksRequest:
     """Mirrors coresdk.v1.GetJwksRequest."""
+
     tenant: TenantContext | None = None
 
 
 @dataclasses.dataclass
 class GetJwksResponse:
     """Mirrors coresdk.v1.GetJwksResponse."""
+
     jwks_json: str = ""

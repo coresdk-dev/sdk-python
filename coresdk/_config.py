@@ -1,4 +1,5 @@
 """SDK configuration from environment variables."""
+
 import os
 from dataclasses import dataclass
 

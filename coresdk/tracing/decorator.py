@@ -2,6 +2,7 @@
 
 import asyncio
 import functools
+import inspect
 from collections.abc import Callable
 from typing import Any
 
@@ -36,7 +37,7 @@ def trace(intent: str, *, span_name: str | None = None) -> Callable[[Callable], 
             except ImportError:
                 return func(*args, **kwargs)
 
-        if asyncio.iscoroutinefunction(func):
+        if inspect.iscoroutinefunction(func):
             return async_wrapper
         return sync_wrapper
 

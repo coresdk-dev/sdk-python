@@ -80,7 +80,13 @@ class CoreSDKMiddleware:
                     request.coresdk_claims = None  # type: ignore[attr-defined]
                 else:
                     request.coresdk_claims = decision.claims  # type: ignore[attr-defined]
-                    tenant_id = decision.claims.tenant_id if decision.claims else ""
+                    c = decision.claims
+                    if c is None:
+                        tenant_id = ""
+                    elif isinstance(c, dict):
+                        tenant_id = c.get("tenant_id", "")
+                    else:
+                        tenant_id = c.tenant_id
                     if span and tenant_id:
                         span.set_attribute("coresdk.tenant_id", tenant_id)
                 if span and _StatusCode:  # type: ignore[truthy-function]

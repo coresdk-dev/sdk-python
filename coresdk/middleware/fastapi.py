@@ -71,8 +71,6 @@ try:
                 token = auth_header[7:]
 
             if not token:
-                if self.sdk.config.dev_mode:
-                    return await call_next(request)
                 return JSONResponse(
                     status_code=401,
                     content={

@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CoreSDK Developer Simulation Report</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+    }
+    .header {
+      background: linear-gradient(135deg, #1e2a3a 0%, #162032 100%);
+      border-bottom: 1px solid #2d3748;
+      padding: 32px 40px;
+    }
+    .header-top {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 8px;
+    }
+    .logo {
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #60a5fa, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+    .badge {
+      background: #1d4ed8;
+      color: #bfdbfe;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 12px;
+      letter-spacing: 0.5px;
+    }
+    .subtitle {
+      color: #64748b;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+    .summary {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      padding: 24px 40px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .stat-card {
+      background: #1a2332;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 20px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 36px;
+      font-weight: 800;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+    .stat-label {
+      font-size: 12px;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+    }
+    .green { color: #22c55e; }
+    .red { color: #ef4444; }
+    .blue { color: #60a5fa; }
+    .purple { color: #a78bfa; }
+    .main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 0 40px 60px;
+    }
+    .overview-bar {
+      background: #1a2332;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+    }
+    .overview-label {
+      font-size: 13px;
+      color: #94a3b8;
+      white-space: nowrap;
+    }
+    .overview-track {
+      flex: 1;
+      height: 12px;
+      background: #0f1117;
+      border-radius: 6px;
+      overflow: hidden;
+    }
+    .overview-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #22c55e, #16a34a);
+      border-radius: 6px;
+      transition: width 0.5s ease;
+    }
+    .overview-pct {
+      font-size: 20px;
+      font-weight: 700;
+      color: #22c55e;
+      white-space: nowrap;
+    }
+    .section {
+      background: #1a2332;
+      border: 1px solid #2d3748;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 20px;
+      background: #1e293b;
+      border-bottom: 1px solid #2d3748;
+    }
+    .section-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: #cbd5e1;
+    }
+    .section-score {
+      font-size: 13px;
+      font-weight: 700;
+      padding: 2px 10px;
+      border-radius: 10px;
+    }
+    .score-ok { background: #14532d; color: #4ade80; }
+    .score-warn { background: #422006; color: #fb923c; }
+    .progress-bar {
+      height: 4px;
+      background: #0f1117;
+    }
+    .progress-fill {
+      height: 100%;
+      transition: width 0.3s ease;
+    }
+    .bar-green { background: linear-gradient(90deg, #22c55e, #16a34a); }
+    .bar-yellow { background: linear-gradient(90deg, #f59e0b, #d97706); }
+    .bar-red { background: linear-gradient(90deg, #ef4444, #dc2626); }
+    .test-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .test-table tr {
+      border-top: 1px solid #1e293b;
+    }
+    .test-table tr:first-child { border-top: none; }
+    .test-table td {
+      padding: 10px 16px;
+      font-size: 13px;
+    }
+    .icon { width: 28px; font-size: 14px; }
+    .test-name { color: #e2e8f0; }
+    .duration { color: #475569; font-size: 11px; text-align: right; font-family: monospace; }
+    .pass { background: transparent; }
+    .fail { background: rgba(239, 68, 68, 0.05); }
+    .detail { color: #f87171; font-size: 12px; font-family: monospace; margin: 0; padding: 4px 0 8px 44px; }
+    .detail-row td { padding-top: 0 !important; padding-bottom: 4px !important; }
+    .footer {
+      text-align: center;
+      padding: 20px;
+      color: #334155;
+      font-size: 12px;
+      border-top: 1px solid #1e293b;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .bug-fix-box {
+      background: #1a2332;
+      border: 1px solid #2563eb;
+      border-left: 4px solid #2563eb;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .bug-fix-title { color: #60a5fa; font-weight: 700; font-size: 14px; margin-bottom: 8px; }
+    .bug-fix-item { color: #94a3b8; font-size: 13px; line-height: 1.8; }
+    .bug-fix-item code { color: #a78bfa; font-family: monospace; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="logo">CoreSDK</div>
+    <span class="badge">v0.2.0</span>
+    <span class="badge" style="background:#166534;color:#86efac;">53/53 PASSING</span>
+  </div>
+  <div class="subtitle">Developer Simulation Report &mdash; End-to-End SDK Test Suite &mdash; 2026-03-21 04:04:53</div>
+</div>
+
+<div class="summary">
+  <div class="stat-card">
+    <div class="stat-value green">53</div>
+    <div class="stat-label">Tests Passed</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value red">0</div>
+    <div class="stat-label">Tests Failed</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value blue">53</div>
+    <div class="stat-label">Total Tests</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value purple">100.0%</div>
+    <div class="stat-label">Pass Rate</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="overview-bar">
+    <span class="overview-label">Overall Pass Rate</span>
+    <div class="overview-track">
+      <div class="overview-fill" style="width:100.0%"></div>
+    </div>
+    <span class="overview-pct">100.0%</span>
+  </div>
+
+  <div class="bug-fix-box">
+    <div class="bug-fix-title">🐛 Bug Fixed During Simulation</div>
+    <div class="bug-fix-item">
+      <strong>FastAPI middleware dev_mode bypass</strong> — When <code>sdk.config.dev_mode=True</code>,
+      missing-token requests were silently passed through (returning 200 instead of 401).
+      This was caused by a <code>if self.sdk.config.dev_mode: return await call_next(request)</code>
+      guard that was incorrectly placed in the missing-token branch. <code>dev_mode</code> controls
+      TLS/insecure channel behavior — it should never bypass authentication middleware.
+      <br><br>
+      <strong>Fix:</strong> Removed the <code>dev_mode</code> bypass from
+      <code>coresdk/middleware/fastapi.py</code> lines 73-75. Missing tokens now always return
+      <code>401 application/problem+json</code> regardless of dev_mode.
+    </div>
+  </div>
+
+  
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">📦 Import & Configuration</span>
+        <span class="section-score score-ok">5/5</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill bar-green" style="width:100%"></div>
+      </div>
+      <table class="test-table">
+        <tbody>
+          
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Import SDK main class</td>
+          <td class="duration">166.7ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Import MockSDK from testing</td>
+          <td class="duration">0.4ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">SDKConfig.from_env() defaults</td>
+          <td class="duration">0.2ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">SDKConfig.from_env() reads env vars</td>
+          <td class="duration">0.1ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">SDK.from_env() classmethod exists</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">🔓 Fail-Open Behavior</span>
+        <span class="section-score score-ok">5/5</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill bar-green" style="width:100%"></div>
+      </div>
+      <table class="test-table">
+        <tbody>
+          
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">validate_token fail-open → allowed=True</td>
+          <td class="duration">8.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">validate_token fail-open → claims populated</td>
+          <td class="duration">0.6ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">evaluate_policy fail-open → True</td>
+          <td class="duration">0.6ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">evaluate_policy returns bool</td>
+          <td class="duration">0.4ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">empty token fail-open → allowed=True</td>
+          <td class="duration">0.5ms</td>
+        </tr>
+        
+        
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">🔒 Fail-Closed Behavior</span>
+        <span class="section-score score-ok">2/2</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill bar-green" style="width:100%"></div>
+      </div>
+      <table class="test-table">
+        <tbody>
+          
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">validate_token fail-closed → ProblemDetailError(401)</td>
+          <td class="duration">0.2ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">evaluate_policy fail-closed → ProblemDetailError(500)</td>
+          <td class="duration">0.1ms</td>
+        </tr>
+        
+        
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">🧪 MockSDK Developer Testing</span>
+        <span class="section-score score-ok">10/10</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill bar-green" style="width:100%"></div>
+      </div>
+      <table class="test-table">
+        <tbody>
+          
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">MockSDK.authorize() → allowed=True with claims</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">MockSDK records authorize() calls</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">MockSDK.set_token_rejected() → allowed=False</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">MockSDK(default_allow=False) → all denied</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">MockSDK.evaluate_policy() records call</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">MockSDK.is_enabled() → True</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">MockSDK.authorize_sync() works</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">MockSDK.config has expected attrs</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">MockSDK returns Claims dataclass (not dict)</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">MockSDK.set_token_decision() custom decision</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">⚠️ RFC 9457 Error Handling</span>
+        <span class="section-score score-ok">9/9</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill bar-green" style="width:100%"></div>
+      </div>
+      <table class="test-table">
+        <tbody>
+          
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">ProblemDetailError.unauthorized() factory</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">ProblemDetailError.forbidden() factory</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">to_dict() has title+status</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">to_dict() includes optional detail/type/instance</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">to_json() produces valid JSON</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">to_response() returns (body, status) tuple</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">CONTENT_TYPE == application/problem+json</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">ProblemDetailError is an Exception</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Extensions (retry_after) in to_dict()</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">🌶️ Flask Middleware</span>
+        <span class="section-score score-ok">6/6</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill bar-green" style="width:100%"></div>
+      </div>
+      <table class="test-table">
+        <tbody>
+          
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Missing token → 401 with RFC 9457 body</td>
+          <td class="duration">2.7ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Valid token → 200</td>
+          <td class="duration">0.6ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Rejected token → 401</td>
+          <td class="duration">0.5ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">/healthz bypasses auth</td>
+          <td class="duration">0.4ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Missing token response Content-Type: application/problem+json</td>
+          <td class="duration">0.4ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">@require_auth decorator</td>
+          <td class="duration">0.4ms</td>
+        </tr>
+        
+        
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">🎸 Django Middleware</span>
+        <span class="section-score score-ok">3/3</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill bar-green" style="width:100%"></div>
+      </div>
+      <table class="test-table">
+        <tbody>
+          
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Missing token → 401 with Content-Type: application/problem+json</td>
+          <td class="duration">0.1ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Valid token → 200</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">/healthz bypasses auth</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">⚡ FastAPI Middleware</span>
+        <span class="section-score score-ok">4/4</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill bar-green" style="width:100%"></div>
+      </div>
+      <table class="test-table">
+        <tbody>
+          
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Missing token → 401</td>
+          <td class="duration">139.5ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Valid token → 200</td>
+          <td class="duration">1.5ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Rejected token → 403 Forbidden</td>
+          <td class="duration">0.8ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">/healthz bypasses auth</td>
+          <td class="duration">1.2ms</td>
+        </tr>
+        
+        
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">🔐 PII Detection</span>
+        <span class="section-score score-ok">4/4</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill bar-green" style="width:100%"></div>
+      </div>
+      <table class="test-table">
+        <tbody>
+          
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Clean spans pass assert_no_pii</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Email in span raises AssertionError</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Bearer token in span raises AssertionError</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">JWT in span raises AssertionError</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        </tbody>
+      </table>
+    </div>
+    
+    <div class="section">
+      <div class="section-header">
+        <span class="section-title">🌍 Real-World Usage Patterns</span>
+        <span class="section-score score-ok">5/5</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill bar-green" style="width:100%"></div>
+      </div>
+      <table class="test-table">
+        <tbody>
+          
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Multi-tenant token validation</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Policy-based authorization</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Request context propagation from claims</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Feature flag gating</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        <tr class="pass">
+          <td class="icon">✅</td>
+          <td class="test-name">Audit call count tracking</td>
+          <td class="duration">0.0ms</td>
+        </tr>
+        
+        
+        </tbody>
+      </table>
+    </div>
+    
+</div>
+
+<div class="footer">
+  Generated 2026-03-21 04:04:53 &bull; CoreSDK v0.2.0 &bull; Python 3.14 &bull; pytest simulation suite
+</div>
+
+</body>
+</html>

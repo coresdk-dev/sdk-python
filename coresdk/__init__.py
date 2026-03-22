@@ -289,7 +289,7 @@ class SDK:
         return {"safe": len(detections) == 0, "detections": detections, "risk": max_risk}
 
     @contextmanager
-    def tenant_scope(self, tenant_id: str, user_id: str = "") -> Iterator[None]:  # type: ignore[override]
+    def tenant_scope(self, tenant_id: str, user_id: str = "") -> Iterator[None]:
         """Context manager that sets tenant/user scope for all SDK calls within the block.
 
         Usage::

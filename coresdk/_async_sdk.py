@@ -194,7 +194,7 @@ class AsyncSDK:
         return await self._client.validate_isolation(requesting_tenant_id, resource_tenant_id)
 
     @asynccontextmanager
-    async def async_tenant_scope(self, tenant_id: str, user_id: str = "") -> AsyncIterator[None]:  # type: ignore[override]
+    async def async_tenant_scope(self, tenant_id: str, user_id: str = "") -> AsyncIterator[None]:
         """Async context manager that sets tenant/user scope for all SDK calls within the block.
 
         Usage::

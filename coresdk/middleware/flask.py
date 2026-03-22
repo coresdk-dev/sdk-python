@@ -46,6 +46,12 @@ class CoreSDKFlask:
     """Flask extension that adds JWT auth and OTel tracing."""
 
     def __init__(self, sdk, app=None, *, pii_masking: bool = True) -> None:
+        try:
+            import flask  # noqa: F401
+        except ImportError as e:
+            raise ImportError(
+                "Flask is required to use CoreSDKFlask. Install it with: pip install flask"
+            ) from e
         self.sdk = sdk
         if pii_masking:
             self._auto_wire_pii_masking()
@@ -180,7 +186,7 @@ def require_auth(f: Callable) -> Callable:
 
     @functools.wraps(f)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
-        if not getattr(g, "claims", None):
+        if getattr(g, "claims", None) is None:
             return _problem_response(
                 {
                     "type": "https://coresdk.io/errors/forbidden",

@@ -42,18 +42,23 @@ def _span_ctx(name: str):
 class CoreSDKMiddleware:
     """Django middleware: validates JWT, injects claims into request."""
 
-    EXEMPT_PATHS = frozenset(["/healthz", "/readyz", "/admin/"])
-
     def __init__(
         self,
         get_response: Callable,
         sdk=None,
         fail_mode: str = "open",
         *,
+        exempt_paths=None,
         pii_masking: bool = True,
     ) -> None:
         self.get_response = get_response
         self.fail_mode = fail_mode
+        from django.conf import settings
+
+        default_paths = getattr(
+            settings, "CORESDK_EXEMPT_PATHS", ["/healthz", "/readyz", "/admin/"]
+        )
+        self.exempt_paths = frozenset(exempt_paths or default_paths)
         if sdk is None:
             from coresdk import SDK
 
@@ -83,7 +88,7 @@ class CoreSDKMiddleware:
         rid_token = _current_request_id.set(request_id)
         request.coresdk_request_id = request_id  # type: ignore[attr-defined]
 
-        if request.path in self.EXEMPT_PATHS or request.path.startswith("/admin/"):
+        if request.path in self.exempt_paths or request.path.startswith("/admin/"):
             response = self.get_response(request)
             response["X-Request-ID"] = request_id
             _current_request_id.reset(rid_token)

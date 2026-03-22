@@ -6,7 +6,7 @@ import uuid
 from collections.abc import Callable
 
 from coresdk._context import _current_request_id
-from coresdk._types import TrialState
+from coresdk._types import Claims, TrialState
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,7 @@ try:
 
         async def _dependency(
             credentials: HTTPAuthorizationCredentials | None = Depends(_bearer_scheme),  # noqa: B008
-        ) -> dict:
+        ) -> Claims:
             if credentials is None:
                 raise HTTPException(
                     status_code=401,
@@ -54,7 +54,10 @@ try:
                         "detail": decision.reason or "Forbidden",
                     },
                 )
-            return decision.claims
+            claims = decision.claims
+            if isinstance(claims, dict):
+                claims = Claims.from_dict(claims)
+            return claims
 
         return _dependency
 
@@ -111,22 +114,15 @@ try:
             """Auto-register PIIMaskingSpanProcessor if OTel is available."""
             try:
                 from opentelemetry import trace
+                from opentelemetry.sdk.trace import TracerProvider
 
                 from coresdk.tracing.processor import PIIMaskingSpanProcessor
 
                 provider = trace.get_tracer_provider()
-                if hasattr(provider, "add_span_processor"):
-                    # Warn if the provider has no exporters — processor will no-op silently
-                    if not getattr(provider, "_active_span_processor", None) and not getattr(
-                        provider, "_span_processors", None
-                    ):
-                        logger.warning(
-                            "PIIMaskingSpanProcessor registered but TracerProvider has no "
-                            "exporters configured. Call trace.set_tracer_provider() before "
-                            "app.add_middleware() to ensure PII masking is active."
-                        )
-                    provider.add_span_processor(PIIMaskingSpanProcessor())
-                    logger.debug("PIIMaskingSpanProcessor auto-wired")
+                if not isinstance(provider, TracerProvider):
+                    return
+                provider.add_span_processor(PIIMaskingSpanProcessor())
+                logger.debug("PIIMaskingSpanProcessor auto-wired")
             except ImportError:
                 pass  # OTel not installed
 

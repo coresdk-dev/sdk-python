@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Generator
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
 from coresdk.testing import FakeSpanExporter, MockSDK, assert_no_pii
+
+if TYPE_CHECKING:
+    from coresdk.testing._mock import CaptureAuditDrain
 
 
 @pytest.fixture
@@ -70,11 +73,11 @@ def coresdk_spans() -> Generator[Any, None, None]:
 
 
 @pytest.fixture
-def capture_audit() -> "CaptureAuditDrain":
+def capture_audit() -> CaptureAuditDrain:
     """Fixture that provides a CaptureAuditDrain for audit event assertions."""
-    from coresdk.testing._mock import CaptureAuditDrain
+    from coresdk.testing._mock import CaptureAuditDrain as _CaptureAuditDrain
 
-    return CaptureAuditDrain()
+    return _CaptureAuditDrain()
 
 
 @pytest.fixture

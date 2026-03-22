@@ -14,6 +14,14 @@ def _parse_exclude_paths() -> list[str]:
     return list(_DEFAULT_EXCLUDE_PATHS)
 
 
+def _parse_custom_prompt_patterns() -> list[tuple[str, str, str]]:
+    raw = os.environ.get("CORESDK_CUSTOM_PROMPT_PATTERNS", "")
+    if not raw:
+        return []
+    parsed = json.loads(raw)
+    return [(str(p[0]), str(p[1]), str(p[2])) for p in parsed]
+
+
 @dataclass
 class SDKConfig:
     sidecar_addr: str = "localhost:50051"
@@ -29,6 +37,7 @@ class SDKConfig:
     inject_headers: bool = True
     exclude_paths: list[str] = None  # type: ignore[assignment]
     api_key_prefix: str = ""
+    custom_prompt_patterns: list[tuple[str, str, str]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.exclude_paths is None:
@@ -53,4 +62,5 @@ class SDKConfig:
             in ("true", "1", "yes"),
             exclude_paths=_parse_exclude_paths(),
             api_key_prefix=os.environ.get("CORESDK_API_KEY_PREFIX", ""),
+            custom_prompt_patterns=_parse_custom_prompt_patterns(),
         )

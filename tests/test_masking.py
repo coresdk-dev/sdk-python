@@ -36,3 +36,29 @@ def test_blocked_field_name():
     result = mask_attributes(attrs)
     assert result["api_key"] == REDACTED
     assert result["action"] == "read"
+
+
+def test_api_key_prefix_auto_masking():
+    """SDKConfig.api_key_prefix auto-populates masking engine patterns."""
+    from unittest.mock import patch
+
+    from coresdk import SDK
+    from coresdk._config import SDKConfig
+
+    cfg = SDKConfig(api_key_prefix="cpod_")
+    with patch("coresdk._client.CoreSDKClient.__init__", return_value=None):
+        sdk = SDK(cfg)
+
+    # Should mask strings matching the prefix + 8+ alphanumeric chars
+    assert sdk.mask_string("key is cpod_abc12345xyz") == f"key is {REDACTED}"
+    assert sdk.mask_dict({"token": "cpod_ABCDEFGHIJ"}) == {"token": REDACTED}
+
+    # Should NOT mask short suffixes (< 8 chars)
+    assert sdk.mask_string("cpod_short") == "cpod_short"
+
+    # Without prefix, default engine still works for standard PII
+    cfg_no_prefix = SDKConfig()
+    with patch("coresdk._client.CoreSDKClient.__init__", return_value=None):
+        sdk2 = SDK(cfg_no_prefix)
+    assert sdk2.mask_string("hello world") == "hello world"
+    assert sdk2.mask_string("user@example.com") == REDACTED

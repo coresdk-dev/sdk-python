@@ -23,7 +23,6 @@ class MockSDK:
         default_allow: bool = True,
         default_claims: "Claims | None" = None,
         fail_mode: str = "open",
-        default_prompt_safe: bool = True,
     ) -> None:
         self.default_allow = default_allow
         if isinstance(default_claims, dict):
@@ -32,7 +31,6 @@ class MockSDK:
             sub="test-user", tenant_id="", roles=["user"], exp=0
         )
         self.fail_mode = fail_mode
-        self.default_prompt_safe = default_prompt_safe
         self.authorize_calls: list[dict] = []
         self.policy_calls: list[dict] = []
         self.config = self._MockConfig()
@@ -148,35 +146,6 @@ class MockSDK:
 
     def validate_isolation(self, requesting_tenant_id: str, resource_tenant_id: str) -> bool:
         return requesting_tenant_id == resource_tenant_id
-
-    def set_prompt_result(
-        self,
-        *,
-        safe: bool,
-        detections: list | None = None,
-        risk: str | None = None,
-    ) -> None:
-        """Override the result returned by :meth:`check_prompt`.
-
-        Usage::
-
-            mock.set_prompt_result(safe=False, risk="high")
-            result = mock.check_prompt(messages)
-            assert result["safe"] is False
-        """
-        self._prompt_result: dict = {
-            "safe": safe,
-            "detections": detections or [],
-            "risk": risk or ("none" if safe else "high"),
-        }
-
-    def check_prompt(self, messages: list[dict]) -> dict:
-        """Mock prompt injection check — returns override if set, else default."""
-        return getattr(self, "_prompt_result", None) or {
-            "safe": self.default_prompt_safe,
-            "detections": [],
-            "risk": "none",
-        }
 
     def mask_dict_rpc(self, data: dict, **kwargs: Any) -> dict:  # noqa: ANN401
         return data

@@ -454,23 +454,6 @@ class AsyncCoreSDKClient:
             logger.warning("MaskString RPC failed: %s", e)
             return value
 
-    async def check_prompt(self, messages: list[dict]) -> dict:
-        """Check LLM messages for prompt injection via the sidecar's MaskingService (async)."""
-        channel = await self._get_channel()
-        if channel is None:
-            return {"safe": True, "detections": [], "risk": "none"}
-        try:
-            payload = _encode_string(1, json.dumps(messages))
-            response_bytes = await self._call(
-                "/coresdk.v1.MaskingService/CheckPrompt", payload
-            )
-            fields = _decode_fields(response_bytes)
-            result: dict = json.loads(_field_str(fields, 1) or '{"safe": true, "detections": [], "risk": "none"}')
-            return result
-        except Exception as e:
-            logger.warning("CheckPrompt RPC failed: %s", e)
-            return {"safe": True, "detections": [], "risk": "none"}
-
     # -----------------------------------------------------------------
     # Authorize (combined auth + authz)
     # -----------------------------------------------------------------

@@ -34,7 +34,6 @@ __all__ = [
     "MaskingConfig",
     "MaskingEngine",
     "mask_dict",
-    "mask_llm_content",
     "mask_string",
 ]
 
@@ -238,10 +237,3 @@ def mask_string(value: str, config: MaskingConfig | None = None) -> str:
     return _engine(config).mask_string(value)
 
 
-def mask_llm_content(text: str, config: MaskingConfig | None = None) -> str:
-    """Mask PII in LLM prompt or response text.
-
-    Functionally identical to :func:`mask_string` but named explicitly
-    for the LLM content-safety use case.
-    """
-    return _engine(config).mask_string(text)

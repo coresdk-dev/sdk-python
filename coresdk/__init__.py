@@ -22,7 +22,7 @@ from coresdk._types import (
 )
 from coresdk.errors._rfc9457 import ProblemDetailError
 from coresdk.logging import coresdk_structlog_processor
-from coresdk.masking import MaskingConfig, MaskingEngine, mask_dict, mask_llm_content, mask_string
+from coresdk.masking import MaskingConfig, MaskingEngine, mask_dict, mask_string
 from coresdk.middleware.django import CoreSDKMiddleware as DjangoMiddleware
 from coresdk.middleware.flask import CoreSDKFlask, require_auth
 from coresdk.tracing.decorator import trace
@@ -47,7 +47,6 @@ __all__ = [
     "get_current_user",
     "get_request_id",
     "mask_dict",
-    "mask_llm_content",
     "mask_string",
     "require_auth",
     "trace",
@@ -99,36 +98,6 @@ def _load_config_file(path: str | Path) -> SDKConfig:
     return config
 
 
-_PROMPT_PATTERNS: list[tuple[str, str, str]] = [
-    (r"ignore\s+(all\s+)?previous", "instruction_override", "high"),
-    (r"disregard\s+your\s+instructions", "instruction_override", "critical"),
-    (r"forget\s+your\s+instructions", "instruction_override", "high"),
-    (r"you\s+are\s+now", "role_hijack", "high"),
-    (r"pretend\s+you\s+are", "role_hijack", "medium"),
-    (r"system\s+prompt", "system_leak", "high"),
-    (r"reveal\s+your\s+prompt", "system_leak", "critical"),
-    (r"show\s+me\s+your\s+instructions", "system_leak", "high"),
-    (r"repeat\s+everything\s+above", "system_leak", "high"),
-    (r"output\s+your\s+initial", "system_leak", "high"),
-    (r"ignore\s+safety", "safety_bypass", "critical"),
-    (r"jailbreak", "safety_bypass", "critical"),
-    (r"DAN\s+mode", "safety_bypass", "critical"),
-    (r"developer\s+mode", "safety_bypass", "high"),
-    # RAG / indirect prompt injection (OWASP LLM Top 10 #1 — context injection)
-    (r"<INST>", "context_injection", "high"),
-    (r"\[SYSTEM\]", "context_injection", "high"),
-    (r"###\s*Instruction", "context_injection", "high"),
-    (r"###\s*System", "context_injection", "high"),
-    (r"\[/INST\]", "context_injection", "medium"),
-    (r"<\|im_start\|>", "context_injection", "high"),
-    (r"<\|im_end\|>", "context_injection", "medium"),
-    (r"BEGINNING OF CONVERSATION", "context_injection", "medium"),
-    (r"ignore the above", "context_injection", "high"),
-    (r"disregard the above", "context_injection", "high"),
-    (r"the previous instructions", "context_injection", "medium"),
-    (r"assistant:\s*<", "context_injection", "high"),
-]
-
 
 class SDK:
     """Main CoreSDK entry point. Initialize with SDK.from_env()."""
@@ -137,9 +106,6 @@ class SDK:
         self.config = config
         self._client = CoreSDKClient(config)
         self._masking_engine = self._build_masking_engine()
-        self._effective_prompt_patterns = _PROMPT_PATTERNS + list(
-            config.custom_prompt_patterns
-        )
 
     def _build_masking_engine(self) -> MaskingEngine:
         """Build a MaskingEngine, adding api_key_prefix pattern if configured."""
@@ -352,53 +318,6 @@ class SDK:
         that prefix are automatically redacted.
         """
         return self._masking_engine.mask_string(value)
-
-    def check_prompt(self, messages: list[dict]) -> dict:
-        """Check LLM messages for prompt injection patterns (local check, no sidecar needed).
-
-        OWASP LLM Top 10 #1: Prompt Injection. Scans messages for known
-        injection patterns, role-sequence anomalies, and indirect/context
-        injection patterns common in RAG pipelines (retrieved documents
-        containing instruction-like content: ``<INST>``, ``[SYSTEM]``,
-        ``### Instruction``, common jailbreak prefixes).
-
-        Args:
-            messages: List of dicts with 'role' and 'content' keys (OpenAI chat format).
-
-        Returns:
-            Dict with 'safe' (bool), 'detections' (list), and 'risk' (str) keys.
-        Custom patterns from ``SDKConfig.custom_prompt_patterns`` are appended
-        to the built-in list.
-
-        Args:
-            messages: List of dicts with 'role' and 'content' keys (OpenAI chat format).
-
-        Returns:
-            Dict with 'safe' (bool), 'detections' (list), and 'risk' (str) keys.
-        """
-        severity_order = {"none": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
-        detections: list[dict] = []
-        for i, msg in enumerate(messages):
-            content = msg.get("content", "").lower()
-            role = msg.get("role", "")
-            # Role sequence anomaly
-            if role == "system" and i > 0:
-                detections.append(
-                    {
-                        "rule": "role_sequence_anomaly",
-                        "index": i,
-                        "severity": "medium",
-                        "description": "System message after non-system messages",
-                    }
-                )
-            for pattern, rule, severity in self._effective_prompt_patterns:
-                if re.search(pattern, content, re.IGNORECASE):
-                    detections.append({"rule": rule, "index": i, "severity": severity})
-        max_risk = "none"
-        for d in detections:
-            if severity_order.get(d["severity"], 0) > severity_order.get(max_risk, 0):
-                max_risk = d["severity"]
-        return {"safe": len(detections) == 0, "detections": detections, "risk": max_risk}
 
     @contextmanager
     def tenant_scope(self, tenant_id: str, user_id: str = "") -> Iterator[None]:

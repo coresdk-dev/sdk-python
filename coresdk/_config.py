@@ -1,8 +1,7 @@
 """SDK configuration from environment variables."""
 
-import json
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 _DEFAULT_EXCLUDE_PATHS = ["/healthz", "/readyz", "/metrics"]
 
@@ -12,19 +11,6 @@ def _parse_exclude_paths() -> list[str]:
     if raw:
         return [p.strip() for p in raw.split(",") if p.strip()]
     return list(_DEFAULT_EXCLUDE_PATHS)
-
-
-def _parse_custom_prompt_patterns() -> list[tuple[str, str, str]]:
-    raw = os.environ.get("CORESDK_CUSTOM_PROMPT_PATTERNS", "")
-    if not raw:
-        return []
-    try:
-        parsed = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise ValueError(
-            f"CORESDK_CUSTOM_PROMPT_PATTERNS is not valid JSON: {exc}"
-        ) from exc
-    return [(str(p[0]), str(p[1]), str(p[2])) for p in parsed]
 
 
 @dataclass
@@ -44,7 +30,6 @@ class SDKConfig:
     exclude_paths: list[str] = None  # type: ignore[assignment]
     service_token: str = ""
     api_key_prefix: str = ""
-    custom_prompt_patterns: list[tuple[str, str, str]] = field(default_factory=list)
 
     def __post_init__(self) -> None:
         if self.exclude_paths is None:
@@ -97,7 +82,6 @@ class SDKConfig:
             service_token=os.environ.get("CORESDK_SERVICE_TOKEN", ""),
             exclude_paths=_parse_exclude_paths(),
             api_key_prefix=os.environ.get("CORESDK_API_KEY_PREFIX", ""),
-            custom_prompt_patterns=_parse_custom_prompt_patterns(),
         )
         config.validate()
         return config

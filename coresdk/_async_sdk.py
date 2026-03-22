@@ -172,10 +172,6 @@ class AsyncSDK:
         """Check sidecar health (async)."""
         return await self._client.health()
 
-    async def check_prompt(self, messages: list[dict]) -> dict:
-        """Check LLM messages for prompt injection via the sidecar (async)."""
-        return await self._client.check_prompt(messages)
-
     async def authorize_request(
         self,
         token: str,

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from contextlib import asynccontextmanager
+
 from coresdk._async_client import AsyncCoreSDKClient
 from coresdk._config import SDKConfig
 from coresdk._types import (
@@ -189,3 +191,22 @@ class AsyncSDK:
     ) -> bool:
         """Validate cross-tenant isolation (async)."""
         return await self._client.validate_isolation(requesting_tenant_id, resource_tenant_id)
+
+    @asynccontextmanager
+    async def async_tenant_scope(self, tenant_id: str, user_id: str = ""):  # noqa: ANN202
+        """Async context manager that sets tenant/user scope for all SDK calls within the block.
+
+        Usage::
+
+            async with sdk.async_tenant_scope("ten_xxx", "usr_xxx"):
+                await sdk.emit_audit_event(action="login")  # auto-scoped
+        """
+        from coresdk import _current_tenant, _current_user
+
+        t_token = _current_tenant.set(tenant_id)
+        u_token = _current_user.set(user_id)
+        try:
+            yield
+        finally:
+            _current_tenant.reset(t_token)
+            _current_user.reset(u_token)

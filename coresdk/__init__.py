@@ -1,5 +1,8 @@
 """CoreSDK — auth, policy, observability. One import."""
 
+import contextvars
+from contextlib import contextmanager
+
 from coresdk._async_sdk import AsyncSDK
 from coresdk._client import CoreSDKClient
 from coresdk._config import SDKConfig
@@ -30,10 +33,27 @@ __all__ = [
     "ProblemDetailError",
     "RateLimitDecision",
     "SamlDecision",
+    "get_current_tenant",
+    "get_current_user",
     "require_auth",
     "trace",
 ]
 __version__ = "0.2.0"
+
+_current_tenant: contextvars.ContextVar[str] = contextvars.ContextVar(
+    "coresdk_tenant_id", default=""
+)
+_current_user: contextvars.ContextVar[str] = contextvars.ContextVar("coresdk_user_id", default="")
+
+
+def get_current_tenant() -> str:
+    """Return the tenant ID set by the nearest enclosing tenant_scope()."""
+    return _current_tenant.get()
+
+
+def get_current_user() -> str:
+    """Return the user ID set by the nearest enclosing tenant_scope()."""
+    return _current_user.get()
 
 
 class SDK:
@@ -183,3 +203,20 @@ class SDK:
     def validate_isolation(self, requesting_tenant_id: str, resource_tenant_id: str) -> bool:
         """Validate cross-tenant isolation."""
         return self._client.validate_isolation(requesting_tenant_id, resource_tenant_id)
+
+    @contextmanager
+    def tenant_scope(self, tenant_id: str, user_id: str = ""):  # noqa: ANN201
+        """Context manager that sets tenant/user scope for all SDK calls within the block.
+
+        Usage::
+
+            with sdk.tenant_scope("ten_xxx", "usr_xxx"):
+                sdk.emit_audit_event(action="login")  # auto-scoped
+        """
+        t_token = _current_tenant.set(tenant_id)
+        u_token = _current_user.set(user_id)
+        try:
+            yield
+        finally:
+            _current_tenant.reset(t_token)
+            _current_user.reset(u_token)

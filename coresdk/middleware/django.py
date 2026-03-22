@@ -41,7 +41,14 @@ class CoreSDKMiddleware:
 
     EXEMPT_PATHS = frozenset(["/healthz", "/readyz", "/admin/"])
 
-    def __init__(self, get_response: Callable, sdk=None, fail_mode: str = "open") -> None:
+    def __init__(
+        self,
+        get_response: Callable,
+        sdk=None,
+        fail_mode: str = "open",
+        *,
+        pii_masking: bool = True,
+    ) -> None:
         self.get_response = get_response
         self.fail_mode = fail_mode
         if sdk is None:
@@ -49,6 +56,22 @@ class CoreSDKMiddleware:
 
             sdk = SDK.from_env()
         self.sdk = sdk
+        if pii_masking:
+            self._auto_wire_pii_masking()
+
+    def _auto_wire_pii_masking(self) -> None:
+        """Auto-register PIIMaskingSpanProcessor if OTel is available."""
+        try:
+            from opentelemetry import trace
+
+            from coresdk.tracing.processor import PIIMaskingSpanProcessor
+
+            provider = trace.get_tracer_provider()
+            if hasattr(provider, "add_span_processor"):
+                provider.add_span_processor(PIIMaskingSpanProcessor())
+                logger.debug("PIIMaskingSpanProcessor auto-wired")
+        except ImportError:
+            pass  # OTel not installed
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
         if request.path in self.EXEMPT_PATHS or request.path.startswith("/admin/"):

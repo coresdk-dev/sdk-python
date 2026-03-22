@@ -164,6 +164,36 @@ class FakeSpanExporter:
         self.spans.clear()
 
 
+class CaptureAuditDrain:
+    """Captures audit events emitted via sdk.emit_audit_event() for test assertions.
+
+    Usage::
+
+        drain = CaptureAuditDrain()
+        # ... code that calls sdk.emit_audit_event() ...
+        assert len(drain.events) == 1
+        assert drain.events[0].action == "user.login"
+    """
+
+    def __init__(self) -> None:
+        self.events: list[AuditRecord] = []
+
+    def capture(self, record: AuditRecord) -> None:
+        self.events.append(record)
+
+    def clear(self) -> None:
+        self.events.clear()
+
+    def get_events(self, action: str | None = None) -> list[AuditRecord]:
+        if action is None:
+            return list(self.events)
+        return [e for e in self.events if hasattr(e, "event_id")]  # filter by action pattern
+
+    @property
+    def count(self) -> int:
+        return len(self.events)
+
+
 PII_PATTERNS = [
     r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}",  # email
     r"\b\d{3}-\d{2}-\d{4}\b",  # SSN

@@ -74,6 +74,7 @@ try:
             fallback_validator=None,
             fallback_on_sidecar_error: bool = True,
             shadow_mode: bool = False,
+            pii_masking: bool = True,
         ):
             super().__init__(app)
             self.sdk = sdk
@@ -81,6 +82,22 @@ try:
             self.fallback_validator = fallback_validator
             self.fallback_on_sidecar_error = fallback_on_sidecar_error
             self.shadow_mode = shadow_mode
+            if pii_masking:
+                self._auto_wire_pii_masking()
+
+        def _auto_wire_pii_masking(self) -> None:
+            """Auto-register PIIMaskingSpanProcessor if OTel is available."""
+            try:
+                from opentelemetry import trace
+
+                from coresdk.tracing.processor import PIIMaskingSpanProcessor
+
+                provider = trace.get_tracer_provider()
+                if hasattr(provider, "add_span_processor"):
+                    provider.add_span_processor(PIIMaskingSpanProcessor())
+                    logger.debug("PIIMaskingSpanProcessor auto-wired")
+            except ImportError:
+                pass  # OTel not installed
 
         async def dispatch(self, request: Request, call_next):
             if request.url.path in self.exclude_paths:

@@ -3,10 +3,13 @@
 from __future__ import annotations
 
 import functools
+import logging
 from collections.abc import Callable
 from typing import Any
 
 from coresdk.errors._rfc9457 import ProblemDetailError
+
+logger = logging.getLogger(__name__)
 
 try:
     from flask import Response, g, request
@@ -39,10 +42,26 @@ def _problem_response(body: dict, status: int):
 class CoreSDKFlask:
     """Flask extension that adds JWT auth and OTel tracing."""
 
-    def __init__(self, sdk, app=None) -> None:
+    def __init__(self, sdk, app=None, *, pii_masking: bool = True) -> None:
         self.sdk = sdk
+        if pii_masking:
+            self._auto_wire_pii_masking()
         if app is not None:
             self.init_app(app)
+
+    def _auto_wire_pii_masking(self) -> None:
+        """Auto-register PIIMaskingSpanProcessor if OTel is available."""
+        try:
+            from opentelemetry import trace
+
+            from coresdk.tracing.processor import PIIMaskingSpanProcessor
+
+            provider = trace.get_tracer_provider()
+            if hasattr(provider, "add_span_processor"):
+                provider.add_span_processor(PIIMaskingSpanProcessor())
+                logger.debug("PIIMaskingSpanProcessor auto-wired")
+        except ImportError:
+            pass  # OTel not installed
 
     def init_app(self, app) -> None:
         app.before_request(self._before_request)

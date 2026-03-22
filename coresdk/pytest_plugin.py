@@ -70,6 +70,14 @@ def coresdk_spans() -> Generator[Any, None, None]:
 
 
 @pytest.fixture
+def capture_audit():  # noqa: ANN201
+    """Fixture that provides a CaptureAuditDrain for audit event assertions."""
+    from coresdk.testing._mock import CaptureAuditDrain
+
+    return CaptureAuditDrain()
+
+
+@pytest.fixture
 def assert_no_pii_fixture(coresdk_spans: Any) -> Generator[None, None, None]:  # noqa: ANN401
     """Automatically asserts no PII in all finished spans after each test."""
     yield

@@ -271,12 +271,14 @@ class SDK:
             role = msg.get("role", "")
             # Role sequence anomaly
             if role == "system" and i > 0:
-                detections.append({
-                    "rule": "role_sequence_anomaly",
-                    "index": i,
-                    "severity": "medium",
-                    "description": "System message after non-system messages",
-                })
+                detections.append(
+                    {
+                        "rule": "role_sequence_anomaly",
+                        "index": i,
+                        "severity": "medium",
+                        "description": "System message after non-system messages",
+                    }
+                )
             for pattern, rule, severity in patterns:
                 if re.search(pattern, content, re.IGNORECASE):
                     detections.append({"rule": rule, "index": i, "severity": severity})

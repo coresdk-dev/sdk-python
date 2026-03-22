@@ -14,7 +14,16 @@ class Claims:
     tenant_id: str
     roles: list[str]
     exp: int
+    # First-class fields for common JWT claims
+    email: str = ""
+    scopes: list[str] = field(default_factory=list)
+    # Raw map of all other claims returned by the sidecar
     extra: dict[str, Any] = field(default_factory=dict)
+
+    @classmethod
+    def empty(cls, tenant_id: str = "") -> "Claims":
+        """Return a safe empty Claims used on denied/error decisions."""
+        return cls(sub="", tenant_id=tenant_id, roles=[], exp=0)
 
 
 @dataclass
@@ -22,7 +31,9 @@ class AuthDecision:
     """Result of an authorization check."""
 
     allowed: bool
-    claims: Claims | None = None
+    # Always non-None: empty Claims on denial prevents AttributeError
+    # at call sites that don't check decision.allowed first.
+    claims: Claims = field(default_factory=Claims.empty)
     reason: str = ""
     tenant_id: str = ""
 

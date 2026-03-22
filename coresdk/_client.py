@@ -155,7 +155,7 @@ class CoreSDKClient:
         if channel is None:
             return AuthDecision(
                 allowed=True,
-                claims=Claims(sub="unknown", tenant_id=effective_tenant, roles=[], exp=0),
+                claims=Claims.empty(effective_tenant),
                 reason="fail-open",
                 tenant_id=effective_tenant,
             )
@@ -174,20 +174,55 @@ class CoreSDKClient:
             )
             response_bytes = stub(payload)
 
-            # ValidateTokenResponse: allowed(1), subject(2), tenant_id(3), roles(4), reason(5)
+            # ValidateTokenResponse: valid(1), subject(2), roles(3), claims_map(4), expires_at(5)
             fields = _decode_fields(response_bytes)
             allowed = _field_bool(fields, 1)
             subject = _field_str(fields, 2)
-            tenant = _field_str(fields, 3) or effective_tenant
-            reason = _field_str(fields, 5)
-            # roles is repeated string at field 4
-            roles = [r.decode("utf-8") if isinstance(r, bytes) else r for r in fields.get(4, [])]
+            # roles is repeated string at field 3 (proto-correct field number)
+            roles = [r.decode("utf-8") if isinstance(r, bytes) else r for r in fields.get(3, [])]
+            # claims_map at field 4: map<string,string> with extra JWT claims
+            # Each map entry is a length-delimited message: key(1), value(2)
+            claims_map: dict[str, str] = {}
+            for entry in fields.get(4, []):
+                if isinstance(entry, bytes) and entry:
+                    ef = _decode_fields(entry)
+                    k = _field_str(ef, 1)
+                    v = _field_str(ef, 2)
+                    if k:
+                        claims_map[k] = v
+            expires_at = _field_int(fields, 5)
+            # Normalize: groups → roles (enterprise IdPs emit "groups" instead of "roles")
+            if not roles and "groups" in claims_map:
+                roles = [g.strip() for g in claims_map["groups"].split(",") if g.strip()]
+            tenant = claims_map.get("tenant_id", "") or effective_tenant
+            email = claims_map.get("email", "")
+            scopes_raw = claims_map.get("scopes", "") or claims_map.get("scope", "")
+            scopes = [s.strip() for s in scopes_raw.split() if s.strip()] if scopes_raw else []
+            # Error detail at field 6 (nested ProblemDetail message, detail string at field 3)
+            reason = ""
+            if 6 in fields:
+                err_bytes = fields[6][0]
+                if isinstance(err_bytes, bytes) and err_bytes:
+                    err_fields = _decode_fields(err_bytes)
+                    reason = _field_str(err_fields, 3)
+            extra = {
+                k: v for k, v in claims_map.items()
+                if k not in {"tenant_id", "email", "scopes", "scope", "groups"}
+            }
 
+            # Always return a Claims object — never None — to prevent AttributeError
+            # at call sites that don't check decision.allowed first (Issue B).
             return AuthDecision(
                 allowed=allowed,
-                claims=Claims(sub=subject, tenant_id=tenant, roles=roles, exp=0)
-                if allowed
-                else None,
+                claims=Claims(
+                    sub=subject,
+                    tenant_id=tenant,
+                    roles=roles,
+                    exp=expires_at,
+                    email=email,
+                    scopes=scopes,
+                    extra=extra,
+                ),
                 reason=reason,
                 tenant_id=tenant,
             )
@@ -196,7 +231,7 @@ class CoreSDKClient:
                 logger.warning("Auth RPC failed, failing open: %s", e)
                 return AuthDecision(
                     allowed=True,
-                    claims=Claims(sub="unknown", tenant_id=effective_tenant, roles=[], exp=0),
+                    claims=Claims.empty(effective_tenant),
                     reason="fail-open",
                     tenant_id=effective_tenant,
                 )
@@ -212,7 +247,7 @@ class CoreSDKClient:
             logger.warning("Auth unexpected error, failing open: %s", exc)
             return AuthDecision(
                 allowed=True,
-                claims=Claims(sub="unknown", tenant_id=effective_tenant, roles=[], exp=0),
+                claims=Claims.empty(effective_tenant),
                 reason="fail-open",
                 tenant_id=effective_tenant,
             )
@@ -626,7 +661,7 @@ class CoreSDKClient:
         if channel is None:
             return AuthDecision(
                 allowed=True,
-                claims=Claims(sub="unknown", tenant_id=effective_tenant, roles=[], exp=0),
+                claims=Claims.empty(effective_tenant),
                 reason="fail-open",
                 tenant_id=effective_tenant,
             )
@@ -641,24 +676,27 @@ class CoreSDKClient:
                 response_deserializer=lambda x: x,
             )
             response_bytes = stub(payload)
-            # AuthorizeResponse: allowed(1), reason(2)
+            # AuthorizeResponse: allowed(1), reason(2), subject(3), roles(4), tenant_id(5)
             fields = _decode_fields(response_bytes)
             allowed = _field_bool(fields, 1)
             reason = _field_str(fields, 2)
+            # Parse subject/roles if the sidecar returns them; fall back to empty strings.
+            subject = _field_str(fields, 3)
+            roles = [r.decode("utf-8") if isinstance(r, bytes) else r for r in fields.get(4, [])]
+            tenant = _field_str(fields, 5) or effective_tenant
+            # Always return a Claims object — never None — to prevent AttributeError (Issue B+C).
             return AuthDecision(
                 allowed=allowed,
-                claims=Claims(sub="", tenant_id=effective_tenant, roles=[], exp=0)
-                if allowed
-                else None,
+                claims=Claims(sub=subject, tenant_id=tenant, roles=roles, exp=0),
                 reason=reason,
-                tenant_id=effective_tenant,
+                tenant_id=tenant,
             )
         except grpc.RpcError as e:
             if self.config.fail_mode == "open":
                 logger.warning("Authorize RPC failed, failing open: %s", e)
                 return AuthDecision(
                     allowed=True,
-                    claims=Claims(sub="unknown", tenant_id=effective_tenant, roles=[], exp=0),
+                    claims=Claims.empty(effective_tenant),
                     reason="fail-open",
                     tenant_id=effective_tenant,
                 )

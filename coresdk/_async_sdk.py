@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from coresdk._async_client import AsyncCoreSDKClient
@@ -193,7 +194,7 @@ class AsyncSDK:
         return await self._client.validate_isolation(requesting_tenant_id, resource_tenant_id)
 
     @asynccontextmanager
-    async def async_tenant_scope(self, tenant_id: str, user_id: str = ""):  # noqa: ANN202
+    async def async_tenant_scope(self, tenant_id: str, user_id: str = "") -> AsyncIterator[None]:  # type: ignore[override]
         """Async context manager that sets tenant/user scope for all SDK calls within the block.
 
         Usage::

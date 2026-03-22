@@ -1,5 +1,6 @@
 """CoreSDK — auth, policy, observability. One import."""
 
+from collections.abc import Iterator
 from contextlib import contextmanager
 
 from coresdk._async_sdk import AsyncSDK
@@ -286,7 +287,7 @@ class SDK:
         return {"safe": len(detections) == 0, "detections": detections, "risk": max_risk}
 
     @contextmanager
-    def tenant_scope(self, tenant_id: str, user_id: str = ""):  # noqa: ANN201
+    def tenant_scope(self, tenant_id: str, user_id: str = "") -> Iterator[None]:  # type: ignore[override]
         """Context manager that sets tenant/user scope for all SDK calls within the block.
 
         Usage::

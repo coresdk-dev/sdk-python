@@ -70,7 +70,7 @@ def coresdk_spans() -> Generator[Any, None, None]:
 
 
 @pytest.fixture
-def capture_audit():  # noqa: ANN201
+def capture_audit() -> "CaptureAuditDrain":
     """Fixture that provides a CaptureAuditDrain for audit event assertions."""
     from coresdk.testing._mock import CaptureAuditDrain
 

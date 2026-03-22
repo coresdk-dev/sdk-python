@@ -577,7 +577,8 @@ class CoreSDKClient:
             )
             response_bytes = stub(payload)
             fields = _decode_fields(response_bytes)
-            return json.loads(_field_str(fields, 1) or "{}")
+            result: dict = json.loads(_field_str(fields, 1) or "{}")
+            return result
         except grpc.RpcError as e:
             logger.warning("Masking RPC failed: %s", e)
             return data

@@ -85,7 +85,8 @@ class AsyncCoreSDKClient:
             request_serializer=lambda x: x,
             response_deserializer=lambda x: x,
         )
-        return await stub(payload)
+        result: bytes = await stub(payload)
+        return result
 
     # -----------------------------------------------------------------
     # Auth
@@ -394,7 +395,8 @@ class AsyncCoreSDKClient:
                 payload += _encode_string(3, p)
             response_bytes = await self._call("/coresdk.v1.MaskingService/Mask", payload)
             fields = _decode_fields(response_bytes)
-            return json.loads(_field_str(fields, 1) or "{}")
+            result: dict = json.loads(_field_str(fields, 1) or "{}")
+            return result
         except Exception as e:
             logger.warning("Masking RPC failed: %s", e)
             return data

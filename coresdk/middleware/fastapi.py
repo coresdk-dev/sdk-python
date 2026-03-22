@@ -81,11 +81,16 @@ try:
             shadow_mode: bool = False,
             pii_masking: bool = True,
             debug_headers: bool | None = None,
-            inject_headers: bool = True,
+            inject_headers: bool | None = None,
         ):
             super().__init__(app)
             self.sdk = sdk
-            self.inject_headers = inject_headers
+            if inject_headers is not None:
+                self.inject_headers = inject_headers
+            elif hasattr(sdk, "config") and hasattr(sdk.config, "inject_headers"):
+                self.inject_headers = sdk.config.inject_headers
+            else:
+                self.inject_headers = True
             if exclude_paths is not None:
                 self.exclude_paths = exclude_paths
             elif hasattr(sdk, "config") and hasattr(sdk.config, "exclude_paths"):

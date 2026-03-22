@@ -1,7 +1,8 @@
 """SDK configuration from environment variables."""
 
+import json
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 _DEFAULT_EXCLUDE_PATHS = ["/healthz", "/readyz", "/metrics"]
 
@@ -25,7 +26,9 @@ class SDKConfig:
     tls_cert: str = ""
     tls_key: str = ""
     tls_ca: str = ""
+    inject_headers: bool = True
     exclude_paths: list[str] = None  # type: ignore[assignment]
+    api_key_prefix: str = ""
 
     def __post_init__(self) -> None:
         if self.exclude_paths is None:
@@ -44,5 +47,10 @@ class SDKConfig:
             tls_cert=os.environ.get("CORESDK_TLS_CERT", ""),
             tls_key=os.environ.get("CORESDK_TLS_KEY", ""),
             tls_ca=os.environ.get("CORESDK_TLS_CA", ""),
+            inject_headers=os.environ.get(
+                "CORESDK_INJECT_TENANT_HEADERS", "true"
+            ).lower()
+            in ("true", "1", "yes"),
             exclude_paths=_parse_exclude_paths(),
+            api_key_prefix=os.environ.get("CORESDK_API_KEY_PREFIX", ""),
         )

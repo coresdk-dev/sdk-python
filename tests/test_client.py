@@ -136,7 +136,7 @@ def test_sdk_config_defaults():
 
     assert cfg.sidecar_addr == "localhost:50051"
     assert cfg.tenant_id == "default"
-    assert cfg.fail_mode == "open"
+    assert cfg.fail_mode == "closed"
     assert cfg.dev_mode is False
 
 

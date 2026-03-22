@@ -83,7 +83,7 @@ def test_fastapi_require_auth_dependency_allowed():
 
     @app.get("/protected")
     async def protected(claims=Depends(require_auth(sdk))):  # noqa: B008
-        return {"sub": claims["sub"]}
+        return {"sub": claims.sub}
 
     client = TestClient(app, raise_server_exceptions=False)
     response = client.get("/protected", headers={"Authorization": "Bearer good-token"})

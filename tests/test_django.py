@@ -111,8 +111,8 @@ def test_django_middleware_stores_claims_on_request():
     middleware(request)
 
     assert captured["claims"] is not None
-    assert captured["claims"]["sub"] == "alice"
-    assert captured["claims"]["roles"] == ["admin"]
+    assert captured["claims"].sub == "alice"
+    assert captured["claims"].roles == ["admin"]
 
 
 # ---------------------------------------------------------------------------

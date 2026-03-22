@@ -212,7 +212,9 @@ try:
                     tenant_id = getattr(request.state, "coresdk_tenant", "")
                     user_id = ""
                     if decision.claims is not None:
-                        user_id = getattr(decision.claims, "sub", "") or getattr(decision.claims, "subject", "")
+                        user_id = getattr(decision.claims, "sub", "") or getattr(
+                            decision.claims, "subject", ""
+                        )
                     raw_headers = list(request.scope.get("headers", []))
                     if tenant_id:
                         raw_headers.append((b"x-tenant-id", tenant_id.encode()))

@@ -14,9 +14,9 @@ logger = logging.getLogger(__name__)
 F = TypeVar("F", bound=Callable[..., Any])
 
 try:
-    from opentelemetry import trace
+    from opentelemetry import trace as _otel_trace
 
-    _tracer = trace.get_tracer("coresdk")
+    _tracer: Any = _otel_trace.get_tracer("coresdk")
 except ImportError:
     _tracer = None
 

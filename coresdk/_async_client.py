@@ -119,7 +119,7 @@ class AsyncCoreSDKClient:
                 allowed=allowed,
                 claims=Claims(sub=subject, tenant_id=tenant, roles=roles, exp=0)
                 if allowed
-                else None,
+                else Claims.empty(tenant),
                 reason=reason,
                 tenant_id=tenant,
             )
@@ -146,7 +146,10 @@ class AsyncCoreSDKClient:
     async def evaluate_policy(self, rule: str, input_data: dict) -> bool:
         channel = await self._get_channel()
         if channel is None:
-            return True
+            policy_mode = self.config.policy_fail_mode or self.config.fail_mode
+            if policy_mode == "open":
+                return True
+            raise CoreSDKError("CoreSDK sidecar unreachable and policy fail mode is closed")
         try:
             payload = (
                 _encode_string(1, rule)
@@ -157,7 +160,8 @@ class AsyncCoreSDKClient:
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)
         except grpc.RpcError as e:
-            if self.config.fail_mode == "open":
+            policy_mode = self.config.policy_fail_mode or self.config.fail_mode
+            if policy_mode == "open":
                 logger.warning("Policy RPC failed, failing open: %s", e)
                 return True
             raise ProblemDetailError(
@@ -451,7 +455,11 @@ class AsyncCoreSDKClient:
             allowed = _field_bool(fields, 1)
             reason = _field_str(fields, 2)
             tid = tenant_id or self.config.tenant_id
-            claims = Claims(sub="", tenant_id=tid, roles=[], exp=0) if allowed else None
+            claims = (
+                Claims(sub="", tenant_id=tid, roles=[], exp=0)
+                if allowed
+                else Claims.empty(tid)
+            )
             return AuthDecision(allowed=allowed, claims=claims, reason=reason, tenant_id=tid)
         except grpc.RpcError as e:
             if self.config.fail_mode == "open":
@@ -481,7 +489,10 @@ class AsyncCoreSDKClient:
         """Dry-run policy evaluation (async)."""
         channel = await self._get_channel()
         if channel is None:
-            return True
+            policy_mode = self.config.policy_fail_mode or self.config.fail_mode
+            if policy_mode == "open":
+                return True
+            raise CoreSDKError("CoreSDK sidecar unreachable and policy fail mode is closed")
         try:
             payload = (
                 _encode_string(1, rule)
@@ -492,7 +503,8 @@ class AsyncCoreSDKClient:
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)
         except grpc.RpcError as e:
-            if self.config.fail_mode == "open":
+            policy_mode = self.config.policy_fail_mode or self.config.fail_mode
+            if policy_mode == "open":
                 logger.warning("DryRun RPC failed, failing open: %s", e)
                 return True
             raise

@@ -255,7 +255,10 @@ class CoreSDKClient:
     def evaluate_policy(self, rule: str, input_data: dict) -> bool:
         channel = self._get_channel()
         if channel is None:
-            return True
+            policy_mode = self.config.policy_fail_mode or self.config.fail_mode
+            if policy_mode == "open":
+                return True
+            raise CoreSDKError("CoreSDK sidecar unreachable and policy fail mode is closed")
         try:
             # EvaluatePolicyRequest: rule(1), input_json(2), tenant_id(3)
             payload = (
@@ -274,7 +277,8 @@ class CoreSDKClient:
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)
         except grpc.RpcError as e:
-            if self.config.fail_mode == "open":
+            policy_mode = self.config.policy_fail_mode or self.config.fail_mode
+            if policy_mode == "open":
                 logger.warning("Policy RPC failed, failing open: %s", e)
                 return True
             raise ProblemDetailError(
@@ -284,7 +288,8 @@ class CoreSDKClient:
                 type_uri="https://coresdk.io/errors/policy",
             ) from e
         except Exception as exc:
-            if self.config.fail_mode == "closed":
+            policy_mode = self.config.policy_fail_mode or self.config.fail_mode
+            if policy_mode == "closed":
                 raise CoreSDKError(f"CoreSDK fail-closed: {exc}") from exc
             logger.warning("Policy unexpected error, failing open: %s", exc)
             return True
@@ -739,7 +744,10 @@ class CoreSDKClient:
         """Dry-run a policy evaluation (does not enforce)."""
         channel = self._get_channel()
         if channel is None:
-            return True
+            policy_mode = self.config.policy_fail_mode or self.config.fail_mode
+            if policy_mode == "open":
+                return True
+            raise CoreSDKError("CoreSDK sidecar unreachable and policy fail mode is closed")
         try:
             # PolicyEvaluateRequest: rule(1), input_json(2), tenant(3)
             payload = (
@@ -757,7 +765,8 @@ class CoreSDKClient:
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)
         except grpc.RpcError as e:
-            if self.config.fail_mode == "open":
+            policy_mode = self.config.policy_fail_mode or self.config.fail_mode
+            if policy_mode == "open":
                 logger.warning("DryRun RPC failed, failing open: %s", e)
                 return True
             raise ProblemDetailError(

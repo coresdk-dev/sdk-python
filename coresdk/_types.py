@@ -21,7 +21,7 @@ class Claims:
     extra: dict[str, Any] = field(default_factory=dict)
 
     @classmethod
-    def empty(cls, tenant_id: str = "") -> "Claims":
+    def empty(cls, tenant_id: str = "") -> Claims:
         """Return a safe empty Claims used on denied/error decisions."""
         return cls(sub="", tenant_id=tenant_id, roles=[], exp=0)
 

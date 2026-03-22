@@ -41,7 +41,9 @@ class MockSDK:
 
     def set_token_rejected(self, token: str, reason: str = "rejected") -> None:
         """Make a specific token return allowed=False."""
-        self.set_token_decision(token, AuthDecision(allowed=False, claims=None, reason=reason))
+        self.set_token_decision(
+            token, AuthDecision(allowed=False, claims=Claims.empty(), reason=reason)
+        )
 
     def set_policy_result(self, rule: str, result: bool) -> None:
         """Override the result of dry_run_policy / evaluate_policy for a specific rule."""
@@ -54,7 +56,7 @@ class MockSDK:
         overrides = getattr(self, "_token_overrides", {})
         if token in overrides:
             return overrides[token]  # type: ignore[no-any-return]
-        claims = self.default_claims if self.default_allow else None
+        claims = self.default_claims if self.default_allow else Claims.empty()
         return AuthDecision(
             allowed=self.default_allow,
             claims=claims,

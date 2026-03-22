@@ -180,8 +180,6 @@ class SDK:
         """Resolve a tenant from a token."""
         return self._client.resolve_tenant(token, tenant_hint=tenant_hint)
 
-    def validate_isolation(
-        self, requesting_tenant_id: str, resource_tenant_id: str
-    ) -> bool:
+    def validate_isolation(self, requesting_tenant_id: str, resource_tenant_id: str) -> bool:
         """Validate cross-tenant isolation."""
         return self._client.validate_isolation(requesting_tenant_id, resource_tenant_id)

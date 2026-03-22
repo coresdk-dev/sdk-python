@@ -35,9 +35,7 @@ class AsyncSDK:
         """Initialize from environment variables."""
         return cls(SDKConfig.from_env())
 
-    async def authorize(
-        self, token: str, *, action: str = "", resource: str = ""
-    ) -> AuthDecision:
+    async def authorize(self, token: str, *, action: str = "", resource: str = "") -> AuthDecision:
         """Validate a JWT and authorize the request (async)."""
         return await self._client.validate_token(token, action=action, resource=resource)
 
@@ -46,7 +44,12 @@ class AsyncSDK:
         return await self._client.evaluate_policy(rule, input_data)
 
     async def check_rate_limit(
-        self, key: str, *, tenant_id: str = "", limit: int = 0, window_seconds: int = 0,
+        self,
+        key: str,
+        *,
+        tenant_id: str = "",
+        limit: int = 0,
+        window_seconds: int = 0,
     ) -> RateLimitDecision:
         """Check a rate limit (async)."""
         return await self._client.check_rate_limit(
@@ -54,18 +57,33 @@ class AsyncSDK:
         )
 
     async def emit_audit_event(
-        self, *, action: str, resource_type: str = "", resource_id: str = "",
-        tenant_id: str = "", user_id: str = "", outcome: str = "success",
+        self,
+        *,
+        action: str,
+        resource_type: str = "",
+        resource_id: str = "",
+        tenant_id: str = "",
+        user_id: str = "",
+        outcome: str = "success",
         metadata: dict | None = None,
     ) -> AuditRecord:
         """Emit a tamper-evident audit event (async)."""
         return await self._client.emit_audit_event(
-            action=action, resource_type=resource_type, resource_id=resource_id,
-            tenant_id=tenant_id, user_id=user_id, outcome=outcome, metadata=metadata,
+            action=action,
+            resource_type=resource_type,
+            resource_id=resource_id,
+            tenant_id=tenant_id,
+            user_id=user_id,
+            outcome=outcome,
+            metadata=metadata,
         )
 
     async def evaluate_flag(
-        self, flag_key: str, tenant_id: str = "", *, user_id: str = "",
+        self,
+        flag_key: str,
+        tenant_id: str = "",
+        *,
+        user_id: str = "",
         attributes: dict | None = None,
     ) -> FlagDecision:
         """Evaluate a feature flag via gRPC (async)."""
@@ -73,27 +91,22 @@ class AsyncSDK:
             flag_key, tenant_id=tenant_id, user_id=user_id, attributes=attributes
         )
 
-    async def check_entitlement(
-        self, entitlement_key: str, *, tenant_id: str = ""
-    ) -> LicenseInfo:
+    async def check_entitlement(self, entitlement_key: str, *, tenant_id: str = "") -> LicenseInfo:
         """Check a license entitlement (async)."""
         return await self._client.check_entitlement(entitlement_key, tenant_id=tenant_id)
 
-    async def assert_entitlement(
-        self, entitlement_key: str, *, tenant_id: str = ""
-    ) -> None:
+    async def assert_entitlement(self, entitlement_key: str, *, tenant_id: str = "") -> None:
         """Assert a license entitlement; raises ProblemDetailError if not entitled."""
         info = await self.check_entitlement(entitlement_key, tenant_id=tenant_id)
         if not info.entitled:
             raise ProblemDetailError(
-                title="License Required", status=403,
+                title="License Required",
+                status=403,
                 detail=f"Not entitled to: {entitlement_key}",
                 type_uri="https://coresdk.io/errors/license",
             )
 
-    async def get_entitlement(
-        self, entitlement_key: str, *, tenant_id: str = ""
-    ) -> int:
+    async def get_entitlement(self, entitlement_key: str, *, tenant_id: str = "") -> int:
         """Get a numeric license entitlement value (async)."""
         info = await self.check_entitlement(entitlement_key, tenant_id=tenant_id)
         return info.numeric_value
@@ -103,9 +116,7 @@ class AsyncSDK:
         info = await self.check_entitlement("__license_meta__", tenant_id=tenant_id)
         return info.expires_at
 
-    async def revoke_token(
-        self, token: str, *, tenant_id: str = "", reason: str = ""
-    ) -> bool:
+    async def revoke_token(self, token: str, *, tenant_id: str = "", reason: str = "") -> bool:
         """Revoke a JWT token (async)."""
         return await self._client.revoke_token(token, tenant_id=tenant_id, reason=reason)
 
@@ -114,7 +125,11 @@ class AsyncSDK:
         return await self._client.is_revoked(token)
 
     async def validate_saml_assertion(
-        self, assertion_b64: str, *, idp_entity_id: str = "", tenant_id: str = "",
+        self,
+        assertion_b64: str,
+        *,
+        idp_entity_id: str = "",
+        tenant_id: str = "",
     ) -> SamlDecision:
         """Validate a SAML assertion (async)."""
         return await self._client.validate_saml_assertion(
@@ -122,20 +137,29 @@ class AsyncSDK:
         )
 
     async def mask_dict_rpc(
-        self, data: dict, extra_blocked_fields: list[str] | None = None,
+        self,
+        data: dict,
+        extra_blocked_fields: list[str] | None = None,
         extra_patterns: list[str] | None = None,
     ) -> dict:
         """Mask PII in a dict via the sidecar (async)."""
         return await self._client.mask_dict_rpc(data, extra_blocked_fields, extra_patterns)
 
     async def mask_string_rpc(
-        self, value: str, extra_patterns: list[str] | None = None,
+        self,
+        value: str,
+        extra_patterns: list[str] | None = None,
     ) -> str:
         """Mask PII in a string via the sidecar (async)."""
         return await self._client.mask_string_rpc(value, extra_patterns)
 
     async def authorize_request(
-        self, token: str, action: str = "", resource: str = "", *, tenant_id: str = "",
+        self,
+        token: str,
+        action: str = "",
+        resource: str = "",
+        *,
+        tenant_id: str = "",
     ) -> AuthDecision:
         """Combined auth + authz check (async)."""
         return await self._client.authorize_request(
@@ -159,7 +183,9 @@ class AsyncSDK:
         return await self._client.resolve_tenant(token, tenant_hint=tenant_hint)
 
     async def validate_isolation(
-        self, requesting_tenant_id: str, resource_tenant_id: str,
+        self,
+        requesting_tenant_id: str,
+        resource_tenant_id: str,
     ) -> bool:
         """Validate cross-tenant isolation (async)."""
         return await self._client.validate_isolation(requesting_tenant_id, resource_tenant_id)

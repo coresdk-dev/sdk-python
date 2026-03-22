@@ -137,7 +137,9 @@ class CircuitBreakerRegistry:
                 ft = kwargs.get("failure_threshold", self._default_failure_threshold)
                 rt = kwargs.get("recovery_timeout_s", self._default_recovery_timeout_s)
                 self._breakers[name] = CircuitBreaker(
-                    name=name, failure_threshold=ft, recovery_timeout_s=rt,
+                    name=name,
+                    failure_threshold=ft,
+                    recovery_timeout_s=rt,
                 )
             return self._breakers[name]
 
@@ -174,9 +176,7 @@ class CircuitBreakerRegistry:
             async def wrapper(*args: Any, **kw: Any) -> Any:  # noqa: ANN401
                 current = cb.state
                 if current is CircuitState.OPEN:
-                    raise RuntimeError(
-                        f"Circuit breaker {cb.name!r} is OPEN — call rejected"
-                    )
+                    raise RuntimeError(f"Circuit breaker {cb.name!r} is OPEN — call rejected")
                 try:
                     result = await func(*args, **kw)
                 except Exception:
@@ -243,7 +243,7 @@ def retry(
                     last_exc = exc
                     if attempt + 1 >= max_attempts:
                         break
-                    base_delay_ms = min(backoff_ms * (2 ** attempt), max_backoff_ms)
+                    base_delay_ms = min(backoff_ms * (2**attempt), max_backoff_ms)
                     jitter = random.uniform(0.75, 1.25)  # noqa: S311
                     delay_s = (base_delay_ms * jitter) / 1000.0
                     logger.debug(
@@ -297,9 +297,7 @@ def circuit_breaker(
         async def wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
             current = cb.state
             if current is CircuitState.OPEN:
-                raise RuntimeError(
-                    f"Circuit breaker {cb.name!r} is OPEN — call rejected"
-                )
+                raise RuntimeError(f"Circuit breaker {cb.name!r} is OPEN — call rejected")
             try:
                 result = await func(*args, **kwargs)
             except Exception:

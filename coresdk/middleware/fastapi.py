@@ -183,7 +183,9 @@ try:
             if not match:
                 logger.warning(
                     "Shadow mode discrepancy: CoreSDK=%s, fallback=%s, path=%s",
-                    coresdk_allowed, fallback_allowed, request.url.path,
+                    coresdk_allowed,
+                    fallback_allowed,
+                    request.url.path,
                 )
 
             # Always use fallback result in shadow mode

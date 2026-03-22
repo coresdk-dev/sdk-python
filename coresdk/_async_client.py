@@ -104,18 +104,13 @@ class AsyncCoreSDKClient:
                 + _encode_string(3, resource)
                 + _encode_string(4, action)
             )
-            response_bytes = await self._call(
-                "/coresdk.v1.AuthService/ValidateToken", payload
-            )
+            response_bytes = await self._call("/coresdk.v1.AuthService/ValidateToken", payload)
             fields = _decode_fields(response_bytes)
             allowed = _field_bool(fields, 1)
             subject = _field_str(fields, 2)
             tenant = _field_str(fields, 3) or self.config.tenant_id
             reason = _field_str(fields, 5)
-            roles = [
-                r.decode("utf-8") if isinstance(r, bytes) else r
-                for r in fields.get(4, [])
-            ]
+            roles = [r.decode("utf-8") if isinstance(r, bytes) else r for r in fields.get(4, [])]
             return AuthDecision(
                 allowed=allowed,
                 claims=Claims(sub=subject, tenant_id=tenant, roles=roles, exp=0),
@@ -126,7 +121,9 @@ class AsyncCoreSDKClient:
                 logger.warning("Auth RPC failed, failing open: %s", e)
                 return self._fail_open_decision()
             raise ProblemDetailError(
-                title="Unauthorized", status=401, detail=str(e),
+                title="Unauthorized",
+                status=401,
+                detail=str(e),
                 type_uri="https://coresdk.io/errors/unauthorized",
             ) from e
         except Exception as exc:
@@ -149,9 +146,7 @@ class AsyncCoreSDKClient:
                 + _encode_string(2, json.dumps(input_data))
                 + _encode_string(3, self.config.tenant_id)
             )
-            response_bytes = await self._call(
-                "/coresdk.v1.PolicyService/Evaluate", payload
-            )
+            response_bytes = await self._call("/coresdk.v1.PolicyService/Evaluate", payload)
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)
         except grpc.RpcError as e:
@@ -159,7 +154,9 @@ class AsyncCoreSDKClient:
                 logger.warning("Policy RPC failed, failing open: %s", e)
                 return True
             raise ProblemDetailError(
-                title="Policy Error", status=500, detail=str(e),
+                title="Policy Error",
+                status=500,
+                detail=str(e),
                 type_uri="https://coresdk.io/errors/policy",
             ) from e
 
@@ -168,7 +165,11 @@ class AsyncCoreSDKClient:
     # -----------------------------------------------------------------
 
     async def check_rate_limit(
-        self, key: str, tenant_id: str = "", limit: int = 0, window_seconds: int = 0,
+        self,
+        key: str,
+        tenant_id: str = "",
+        limit: int = 0,
+        window_seconds: int = 0,
     ) -> RateLimitDecision:
         channel = await self._get_channel()
         if channel is None:
@@ -180,9 +181,7 @@ class AsyncCoreSDKClient:
                 + _encode_varint_field(3, limit)
                 + _encode_varint_field(4, window_seconds)
             )
-            response_bytes = await self._call(
-                "/coresdk.v1.RateLimitService/Check", payload
-            )
+            response_bytes = await self._call("/coresdk.v1.RateLimitService/Check", payload)
             fields = _decode_fields(response_bytes)
             return RateLimitDecision(
                 allowed=_field_bool(fields, 1),
@@ -200,8 +199,14 @@ class AsyncCoreSDKClient:
     # -----------------------------------------------------------------
 
     async def emit_audit_event(
-        self, *, action: str, resource_type: str = "", resource_id: str = "",
-        tenant_id: str = "", user_id: str = "", outcome: str = "success",
+        self,
+        *,
+        action: str,
+        resource_type: str = "",
+        resource_id: str = "",
+        tenant_id: str = "",
+        user_id: str = "",
+        outcome: str = "success",
         metadata: dict | None = None,
     ) -> AuditRecord:
         channel = await self._get_channel()
@@ -217,9 +222,7 @@ class AsyncCoreSDKClient:
                 + _encode_string(6, outcome)
                 + _encode_string(7, json.dumps(metadata or {}))
             )
-            response_bytes = await self._call(
-                "/coresdk.v1.AuditService/Emit", payload
-            )
+            response_bytes = await self._call("/coresdk.v1.AuditService/Emit", payload)
             fields = _decode_fields(response_bytes)
             return AuditRecord(
                 event_id=_field_str(fields, 1),
@@ -238,7 +241,10 @@ class AsyncCoreSDKClient:
     # -----------------------------------------------------------------
 
     async def evaluate_flag(
-        self, flag_key: str, tenant_id: str = "", user_id: str = "",
+        self,
+        flag_key: str,
+        tenant_id: str = "",
+        user_id: str = "",
         attributes: dict | None = None,
     ) -> FlagDecision:
         channel = await self._get_channel()
@@ -251,9 +257,7 @@ class AsyncCoreSDKClient:
                 + _encode_string(3, user_id)
                 + _encode_string(4, json.dumps(attributes or {}))
             )
-            response_bytes = await self._call(
-                "/coresdk.v1.FlagService/Evaluate", payload
-            )
+            response_bytes = await self._call("/coresdk.v1.FlagService/Evaluate", payload)
             fields = _decode_fields(response_bytes)
             return FlagDecision(
                 enabled=_field_bool(fields, 1),
@@ -271,15 +275,16 @@ class AsyncCoreSDKClient:
     # -----------------------------------------------------------------
 
     async def check_entitlement(
-        self, entitlement_key: str, tenant_id: str = "",
+        self,
+        entitlement_key: str,
+        tenant_id: str = "",
     ) -> LicenseInfo:
         channel = await self._get_channel()
         if channel is None:
             return LicenseInfo(entitled=True, numeric_value=0, expires_at=0, plan="")
         try:
-            payload = (
-                _encode_string(1, entitlement_key)
-                + _encode_string(2, tenant_id or self.config.tenant_id)
+            payload = _encode_string(1, entitlement_key) + _encode_string(
+                2, tenant_id or self.config.tenant_id
             )
             response_bytes = await self._call(
                 "/coresdk.v1.LicenseService/CheckEntitlement", payload
@@ -302,7 +307,10 @@ class AsyncCoreSDKClient:
     # -----------------------------------------------------------------
 
     async def revoke_token(
-        self, token: str, tenant_id: str = "", reason: str = "",
+        self,
+        token: str,
+        tenant_id: str = "",
+        reason: str = "",
     ) -> bool:
         try:
             payload = (
@@ -310,9 +318,7 @@ class AsyncCoreSDKClient:
                 + _encode_string(2, tenant_id or self.config.tenant_id)
                 + _encode_string(3, reason)
             )
-            response_bytes = await self._call(
-                "/coresdk.v1.AuthService/RevokeToken", payload
-            )
+            response_bytes = await self._call("/coresdk.v1.AuthService/RevokeToken", payload)
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)
         except Exception as e:
@@ -322,9 +328,7 @@ class AsyncCoreSDKClient:
     async def is_revoked(self, token: str) -> bool:
         try:
             payload = _encode_string(1, token)
-            response_bytes = await self._call(
-                "/coresdk.v1.AuthService/IsRevoked", payload
-            )
+            response_bytes = await self._call("/coresdk.v1.AuthService/IsRevoked", payload)
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)
         except Exception as e:
@@ -336,7 +340,10 @@ class AsyncCoreSDKClient:
     # -----------------------------------------------------------------
 
     async def validate_saml_assertion(
-        self, assertion_b64: str, idp_entity_id: str = "", tenant_id: str = "",
+        self,
+        assertion_b64: str,
+        idp_entity_id: str = "",
+        tenant_id: str = "",
     ) -> SamlDecision:
         channel = await self._get_channel()
         if channel is None:
@@ -351,10 +358,7 @@ class AsyncCoreSDKClient:
                 "/coresdk.v1.AuthService/ValidateSAMLAssertion", payload
             )
             fields = _decode_fields(response_bytes)
-            groups = [
-                r.decode("utf-8") if isinstance(r, bytes) else r
-                for r in fields.get(4, [])
-            ]
+            groups = [r.decode("utf-8") if isinstance(r, bytes) else r for r in fields.get(4, [])]
             return SamlDecision(
                 valid=_field_bool(fields, 1),
                 user_id=_field_str(fields, 2),
@@ -373,7 +377,9 @@ class AsyncCoreSDKClient:
     # -----------------------------------------------------------------
 
     async def mask_dict_rpc(
-        self, data: dict, extra_blocked_fields: list[str] | None = None,
+        self,
+        data: dict,
+        extra_blocked_fields: list[str] | None = None,
         extra_patterns: list[str] | None = None,
     ) -> dict:
         """Mask PII in a dict via the sidecar's MaskingService (async)."""
@@ -394,7 +400,9 @@ class AsyncCoreSDKClient:
             return data
 
     async def mask_string_rpc(
-        self, value: str, extra_patterns: list[str] | None = None,
+        self,
+        value: str,
+        extra_patterns: list[str] | None = None,
     ) -> str:
         """Mask PII in a string via the sidecar's MaskingService (async)."""
         channel = await self._get_channel()
@@ -416,7 +424,11 @@ class AsyncCoreSDKClient:
     # -----------------------------------------------------------------
 
     async def authorize_request(
-        self, token: str, action: str = "", resource: str = "", tenant_id: str = "",
+        self,
+        token: str,
+        action: str = "",
+        resource: str = "",
+        tenant_id: str = "",
     ) -> AuthDecision:
         """Combined auth+authz via AuthService/Authorize (async)."""
         channel = await self._get_channel()
@@ -424,13 +436,9 @@ class AsyncCoreSDKClient:
             return self._fail_open_decision()
         try:
             payload = (
-                _encode_string(2, action)
-                + _encode_string(3, resource)
-                + _encode_string(7, token)
+                _encode_string(2, action) + _encode_string(3, resource) + _encode_string(7, token)
             )
-            response_bytes = await self._call(
-                "/coresdk.v1.AuthService/Authorize", payload
-            )
+            response_bytes = await self._call("/coresdk.v1.AuthService/Authorize", payload)
             fields = _decode_fields(response_bytes)
             allowed = _field_bool(fields, 1)
             reason = _field_str(fields, 2)
@@ -519,16 +527,18 @@ class AsyncCoreSDKClient:
             return {"tenant_id": self.config.tenant_id}
 
     async def validate_isolation(
-        self, requesting_tenant_id: str, resource_tenant_id: str,
+        self,
+        requesting_tenant_id: str,
+        resource_tenant_id: str,
     ) -> bool:
         """Validate cross-tenant isolation (async)."""
         try:
-            payload = (
-                _encode_string(1, requesting_tenant_id)
-                + _encode_string(2, resource_tenant_id)
+            payload = _encode_string(1, requesting_tenant_id) + _encode_string(
+                2, resource_tenant_id
             )
             response_bytes = await self._call(
-                "/coresdk.v1.TenantService/ValidateIsolation", payload,
+                "/coresdk.v1.TenantService/ValidateIsolation",
+                payload,
             )
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)

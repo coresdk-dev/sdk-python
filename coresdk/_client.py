@@ -425,9 +425,8 @@ class CoreSDKClient:
         if channel is None:
             return LicenseInfo(entitled=True, numeric_value=0, expires_at=0, plan="")
         try:
-            payload = (
-                _encode_string(1, entitlement_key)
-                + _encode_string(2, tenant_id or self.config.tenant_id)
+            payload = _encode_string(1, entitlement_key) + _encode_string(
+                2, tenant_id or self.config.tenant_id
             )
             stub = channel.unary_unary(
                 "/coresdk.v1.LicenseService/CheckEntitlement",
@@ -531,10 +530,7 @@ class CoreSDKClient:
             )
             response_bytes = stub(payload)
             fields = _decode_fields(response_bytes)
-            groups = [
-                r.decode("utf-8") if isinstance(r, bytes) else r
-                for r in fields.get(4, [])
-            ]
+            groups = [r.decode("utf-8") if isinstance(r, bytes) else r for r in fields.get(4, [])]
             return SamlDecision(
                 valid=_field_bool(fields, 1),
                 user_id=_field_str(fields, 2),
@@ -633,9 +629,7 @@ class CoreSDKClient:
         try:
             # AuthorizeRequest: subject(1), action(2), resource(3), token(7)
             payload = (
-                _encode_string(2, action)
-                + _encode_string(3, resource)
-                + _encode_string(7, token)
+                _encode_string(2, action) + _encode_string(3, resource) + _encode_string(7, token)
             )
             stub = channel.unary_unary(
                 "/coresdk.v1.AuthService/Authorize",
@@ -663,7 +657,9 @@ class CoreSDKClient:
                     reason="fail-open",
                 )
             raise ProblemDetailError(
-                title="Forbidden", status=403, detail=str(e),
+                title="Forbidden",
+                status=403,
+                detail=str(e),
                 type_uri="https://coresdk.io/errors/forbidden",
             ) from e
 
@@ -721,7 +717,9 @@ class CoreSDKClient:
                 logger.warning("DryRun RPC failed, failing open: %s", e)
                 return True
             raise ProblemDetailError(
-                title="Policy Error", status=500, detail=str(e),
+                title="Policy Error",
+                status=500,
+                detail=str(e),
                 type_uri="https://coresdk.io/errors/policy",
             ) from e
 
@@ -789,18 +787,15 @@ class CoreSDKClient:
     # Tenant: ValidateIsolation
     # -----------------------------------------------------------------
 
-    def validate_isolation(
-        self, requesting_tenant_id: str, resource_tenant_id: str
-    ) -> bool:
+    def validate_isolation(self, requesting_tenant_id: str, resource_tenant_id: str) -> bool:
         """Validate cross-tenant isolation."""
         channel = self._get_channel()
         if channel is None:
             return requesting_tenant_id == resource_tenant_id
         try:
             # ValidateIsolationRequest: requesting_tenant_id(1), resource_tenant_id(2)
-            payload = (
-                _encode_string(1, requesting_tenant_id)
-                + _encode_string(2, resource_tenant_id)
+            payload = _encode_string(1, requesting_tenant_id) + _encode_string(
+                2, resource_tenant_id
             )
             stub = channel.unary_unary(
                 "/coresdk.v1.TenantService/ValidateIsolation",

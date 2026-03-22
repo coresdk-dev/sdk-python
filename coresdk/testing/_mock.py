@@ -73,7 +73,10 @@ class MockSDK:
         )
 
     def evaluate_flag(
-        self, flag_key: str, tenant_id: str = "", **kwargs: Any  # noqa: ANN401
+        self,
+        flag_key: str,
+        tenant_id: str = "",
+        **kwargs: Any,  # noqa: ANN401
     ) -> FlagDecision:
         return FlagDecision(enabled=True, variant="", reason="mock")
 
@@ -96,12 +99,18 @@ class MockSDK:
         return False
 
     def validate_saml_assertion(
-        self, assertion_b64: str, **kwargs: Any  # noqa: ANN401
+        self,
+        assertion_b64: str,
+        **kwargs: Any,  # noqa: ANN401
     ) -> SamlDecision:
         return SamlDecision(valid=True, user_id="mock-user", email="mock@example.com")
 
     def authorize_request(
-        self, token: str, action: str = "", resource: str = "", **kwargs: Any  # noqa: ANN401
+        self,
+        token: str,
+        action: str = "",
+        resource: str = "",
+        **kwargs: Any,  # noqa: ANN401
     ) -> AuthDecision:
         return self.authorize(token, action=action, resource=resource)
 
@@ -117,9 +126,7 @@ class MockSDK:
     def resolve_tenant(self, token: str, tenant_hint: str = "") -> dict:
         return {"tenant_id": "test", "tenant_name": "Test Tenant"}
 
-    def validate_isolation(
-        self, requesting_tenant_id: str, resource_tenant_id: str
-    ) -> bool:
+    def validate_isolation(self, requesting_tenant_id: str, resource_tenant_id: str) -> bool:
         return requesting_tenant_id == resource_tenant_id
 
     def mask_dict_rpc(self, data: dict, **kwargs: Any) -> dict:  # noqa: ANN401

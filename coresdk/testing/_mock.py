@@ -3,7 +3,15 @@
 import re
 from typing import Any, ClassVar
 
-from coresdk._types import AuthDecision, Claims
+from coresdk._types import (
+    AuditRecord,
+    AuthDecision,
+    Claims,
+    FlagDecision,
+    LicenseInfo,
+    RateLimitDecision,
+    SamlDecision,
+)
 
 
 class MockSDK:
@@ -55,6 +63,70 @@ class MockSDK:
 
     def is_enabled(self, flag_key: str, tenant_id: str = "") -> bool:
         return True
+
+    def check_rate_limit(self, key: str, **kwargs: Any) -> RateLimitDecision:  # noqa: ANN401
+        return RateLimitDecision(allowed=True, remaining=999, retry_after_ms=0)
+
+    def emit_audit_event(self, **kwargs: Any) -> AuditRecord:  # noqa: ANN401
+        return AuditRecord(
+            event_id="mock-id", sequence_id=0, record_hash="mock", previous_hash="genesis"
+        )
+
+    def evaluate_flag(
+        self, flag_key: str, tenant_id: str = "", **kwargs: Any  # noqa: ANN401
+    ) -> FlagDecision:
+        return FlagDecision(enabled=True, variant="", reason="mock")
+
+    def check_entitlement(self, key: str, **kwargs: Any) -> LicenseInfo:  # noqa: ANN401
+        return LicenseInfo(entitled=True, numeric_value=0, expires_at=0, plan="enterprise")
+
+    def assert_entitlement(self, key: str, **kwargs: Any) -> None:  # noqa: ANN401
+        pass
+
+    def get_entitlement(self, key: str, **kwargs: Any) -> int:  # noqa: ANN401
+        return 0
+
+    def license_expires_at(self, **kwargs: Any) -> int:  # noqa: ANN401
+        return 0
+
+    def revoke_token(self, token: str, **kwargs: Any) -> bool:  # noqa: ANN401
+        return True
+
+    def is_revoked(self, token: str) -> bool:
+        return False
+
+    def validate_saml_assertion(
+        self, assertion_b64: str, **kwargs: Any  # noqa: ANN401
+    ) -> SamlDecision:
+        return SamlDecision(valid=True, user_id="mock-user", email="mock@example.com")
+
+    def authorize_request(
+        self, token: str, action: str = "", resource: str = "", **kwargs: Any  # noqa: ANN401
+    ) -> AuthDecision:
+        return self.authorize(token, action=action, resource=resource)
+
+    def get_jwks(self) -> str:
+        return '{"keys":[]}'
+
+    def dry_run_policy(self, rule: str, input_data: dict) -> bool:
+        return True
+
+    def get_config(self) -> dict:
+        return {"version": "mock"}
+
+    def resolve_tenant(self, token: str, tenant_hint: str = "") -> dict:
+        return {"tenant_id": "test", "tenant_name": "Test Tenant"}
+
+    def validate_isolation(
+        self, requesting_tenant_id: str, resource_tenant_id: str
+    ) -> bool:
+        return requesting_tenant_id == resource_tenant_id
+
+    def mask_dict_rpc(self, data: dict, **kwargs: Any) -> dict:  # noqa: ANN401
+        return data
+
+    def mask_string_rpc(self, value: str, **kwargs: Any) -> str:  # noqa: ANN401
+        return value
 
     class _MockConfig:
         fail_mode: ClassVar[str] = "open"

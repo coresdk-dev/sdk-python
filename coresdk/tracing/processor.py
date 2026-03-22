@@ -65,14 +65,53 @@ try:
 
         CRITICAL: Must be registered as SpanProcessor (not SpanExporter)
         so masking fires before the export queue.
+
+        Supports custom patterns and blocked fields::
+
+            PIIMaskingSpanProcessor(
+                extra_blocked_fields=frozenset(["llm_prompt", "system_prompt"]),
+                extra_patterns=[r"cpod_[A-Za-z0-9]{32}"],
+            )
         """
+
+        def __init__(
+            self,
+            *,
+            extra_blocked_fields: frozenset[str] | None = None,
+            extra_patterns: list[str] | None = None,
+        ) -> None:
+            self._blocked = BLOCKED_FIELDS | (extra_blocked_fields or frozenset())
+            self._extra_res = [re.compile(p) for p in (extra_patterns or [])]
+
+        def _mask_value(self, value: Any) -> Any:  # noqa: ANN401
+            """Mask a value using default + custom patterns."""
+            result = mask_value(value)
+            if result == REDACTED:
+                return result
+            if isinstance(value, str):
+                for r in self._extra_res:
+                    if r.search(value):
+                        return REDACTED
+            return result
+
+        def _mask_attributes(self, attributes: dict) -> dict:
+            """Mask attributes using default + custom blocked fields."""
+            result = {}
+            for key, value in attributes.items():
+                key_lower = key.lower()
+                key_suffix = key_lower.rsplit(".", 1)[-1]
+                if key_lower in self._blocked or key_suffix in self._blocked:
+                    result[key] = REDACTED
+                else:
+                    result[key] = self._mask_value(value)
+            return result
 
         def on_start(self, span: Span, parent_context: Any = None) -> None:  # noqa: ANN401
             pass
 
         def on_end(self, span: ReadableSpan) -> None:
             if span.attributes and hasattr(span, "_attributes") and span._attributes:
-                masked = mask_attributes(dict(span._attributes))
+                masked = self._mask_attributes(dict(span._attributes))
                 span._attributes.clear()  # type: ignore[attr-defined]
                 span._attributes.update(masked)  # type: ignore[attr-defined]
 
@@ -80,7 +119,7 @@ try:
             if hasattr(span, "_events") and span._events:
                 for event in span._events:
                     if hasattr(event, "attributes") and event.attributes:
-                        masked = mask_attributes(dict(event.attributes))
+                        masked = self._mask_attributes(dict(event.attributes))
                         import contextlib
 
                         # immutable attributes — acceptable limitation

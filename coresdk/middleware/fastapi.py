@@ -54,12 +54,33 @@ try:
         return _dependency
 
     class CoreSDKMiddleware(BaseHTTPMiddleware):
-        """FastAPI middleware: validates JWT, attaches user context, creates OTel span."""
+        """FastAPI middleware: validates JWT, attaches user context, creates OTel span.
 
-        def __init__(self, app, sdk, *, exclude_paths: list | None = None):
+        Shadow mode (safe migration)::
+
+            CoreSDKMiddleware(
+                app, sdk,
+                fallback_validator=my_existing_validator,
+                shadow_mode=True,  # validate with both, log discrepancies, use fallback
+            )
+        """
+
+        def __init__(
+            self,
+            app,
+            sdk,
+            *,
+            exclude_paths: list | None = None,
+            fallback_validator=None,
+            fallback_on_sidecar_error: bool = True,
+            shadow_mode: bool = False,
+        ):
             super().__init__(app)
             self.sdk = sdk
             self.exclude_paths = exclude_paths or ["/healthz", "/readyz", "/metrics"]
+            self.fallback_validator = fallback_validator
+            self.fallback_on_sidecar_error = fallback_on_sidecar_error
+            self.shadow_mode = shadow_mode
 
         async def dispatch(self, request: Request, call_next):
             if request.url.path in self.exclude_paths:
@@ -71,6 +92,9 @@ try:
                 token = auth_header[7:]
 
             if not token:
+                # In shadow mode with fallback, let fallback handle missing token
+                if self.shadow_mode and self.fallback_validator:
+                    return await call_next(request)
                 return JSONResponse(
                     status_code=401,
                     content={
@@ -82,10 +106,23 @@ try:
                     media_type="application/problem+json",
                 )
 
+            # Shadow mode: validate with both, log discrepancies, use fallback result
+            if self.shadow_mode and self.fallback_validator:
+                return await self._dispatch_shadow(request, call_next, token)
+
             try:
                 decision = self.sdk.authorize(token)
                 claims = decision.claims if hasattr(decision, "claims") else decision
                 request.state.coresdk_user = claims
+
+                # Fallback on sidecar error
+                if not decision.allowed and self.fallback_validator and self.fallback_on_sidecar_error:
+                    if decision.reason == "fail-open":
+                        fallback_result = self.fallback_validator(token)
+                        if fallback_result:
+                            request.state.coresdk_user = fallback_result
+                            return await call_next(request)
+
                 if not decision.allowed and decision.reason != "fail-open":
                     return JSONResponse(
                         status_code=403,
@@ -104,7 +141,7 @@ try:
                 )
             except Exception as e:
                 if self.sdk.config.fail_mode == "open":
-                    logger.warning(f"Auth failed, failing open: {e}")
+                    logger.warning("Auth failed, failing open: %s", e)
                     return await call_next(request)
                 return JSONResponse(
                     status_code=401,
@@ -117,6 +154,36 @@ try:
                     media_type="application/problem+json",
                 )
 
+            return await call_next(request)
+
+        async def _dispatch_shadow(self, request: Request, call_next, token: str):
+            """Shadow mode: validate with both CoreSDK and fallback, log discrepancies."""
+            coresdk_allowed = False
+            try:
+                decision = self.sdk.authorize(token)
+                coresdk_allowed = decision.allowed
+            except Exception as e:
+                logger.debug("Shadow mode: CoreSDK auth error: %s", e)
+
+            fallback_result = None
+            fallback_allowed = False
+            try:
+                fallback_result = self.fallback_validator(token)
+                fallback_allowed = bool(fallback_result)
+            except Exception as e:
+                logger.debug("Shadow mode: fallback auth error: %s", e)
+
+            # Log discrepancy
+            match = coresdk_allowed == fallback_allowed
+            if not match:
+                logger.warning(
+                    "Shadow mode discrepancy: CoreSDK=%s, fallback=%s, path=%s",
+                    coresdk_allowed, fallback_allowed, request.url.path,
+                )
+
+            # Always use fallback result in shadow mode
+            if fallback_result:
+                request.state.coresdk_user = fallback_result
             return await call_next(request)
 
 except ImportError:

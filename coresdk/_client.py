@@ -7,7 +7,15 @@ from pathlib import Path
 import grpc
 
 from coresdk._config import SDKConfig
-from coresdk._types import AuthDecision, Claims
+from coresdk._types import (
+    AuditRecord,
+    AuthDecision,
+    Claims,
+    FlagDecision,
+    LicenseInfo,
+    RateLimitDecision,
+    SamlDecision,
+)
 from coresdk.errors._rfc9457 import CoreSDKError, ProblemDetailError
 
 logger = logging.getLogger(__name__)
@@ -84,6 +92,19 @@ def _field_str(fields: dict, num: int, default: str = "") -> str:
 
 def _field_bool(fields: dict, num: int) -> bool:
     return bool(fields.get(num, [0])[0])
+
+
+def _encode_varint_field(field_num: int, value: int) -> bytes:
+    """Encode an integer field (varint wire type 0)."""
+    if value == 0:
+        return b""
+    tag = (field_num << 3) | 0
+    return _varint(tag) + _varint(value)
+
+
+def _field_int(fields: dict, num: int) -> int:
+    """Decode a varint integer field."""
+    return int(fields.get(num, [0])[0])
 
 
 # ---------------------------------------------------------------------------
@@ -246,3 +267,550 @@ class CoreSDKClient:
             if getattr(self.config, "fail_mode", "open") == "closed":
                 raise
             return True  # fail-open
+
+    # -----------------------------------------------------------------
+    # Rate Limiting
+    # -----------------------------------------------------------------
+
+    def check_rate_limit(
+        self,
+        key: str,
+        tenant_id: str = "",
+        limit: int = 0,
+        window_seconds: int = 0,
+    ) -> RateLimitDecision:
+        """Check a rate limit via the sidecar."""
+        channel = self._get_channel()
+        if channel is None:
+            return RateLimitDecision(allowed=True, remaining=0, retry_after_ms=0)
+        try:
+            payload = (
+                _encode_string(1, key)
+                + _encode_string(2, tenant_id or self.config.tenant_id)
+                + _encode_varint_field(3, limit)
+                + _encode_varint_field(4, window_seconds)
+            )
+            stub = channel.unary_unary(
+                "/coresdk.v1.RateLimitService/Check",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            fields = _decode_fields(response_bytes)
+            return RateLimitDecision(
+                allowed=_field_bool(fields, 1),
+                remaining=_field_int(fields, 2),
+                retry_after_ms=_field_int(fields, 3),
+            )
+        except grpc.RpcError as e:
+            if self.config.fail_mode == "open":
+                logger.warning("RateLimit RPC failed, failing open: %s", e)
+                return RateLimitDecision(allowed=True, remaining=0, retry_after_ms=0)
+            raise ProblemDetailError(
+                title="Rate Limit Error",
+                status=500,
+                detail=str(e),
+                type_uri="https://coresdk.io/errors/ratelimit",
+            ) from e
+
+    # -----------------------------------------------------------------
+    # Audit
+    # -----------------------------------------------------------------
+
+    def emit_audit_event(
+        self,
+        *,
+        action: str,
+        resource_type: str = "",
+        resource_id: str = "",
+        tenant_id: str = "",
+        user_id: str = "",
+        outcome: str = "success",
+        metadata: dict | None = None,
+    ) -> AuditRecord:
+        """Emit a tamper-evident audit event via the sidecar."""
+        channel = self._get_channel()
+        if channel is None:
+            return AuditRecord(event_id="", sequence_id=0, record_hash="", previous_hash="")
+        try:
+            payload = (
+                _encode_string(1, action)
+                + _encode_string(2, resource_type)
+                + _encode_string(3, resource_id)
+                + _encode_string(4, tenant_id or self.config.tenant_id)
+                + _encode_string(5, user_id)
+                + _encode_string(6, outcome)
+                + _encode_string(7, json.dumps(metadata or {}))
+            )
+            stub = channel.unary_unary(
+                "/coresdk.v1.AuditService/Emit",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            fields = _decode_fields(response_bytes)
+            return AuditRecord(
+                event_id=_field_str(fields, 1),
+                sequence_id=_field_int(fields, 2),
+                record_hash=_field_str(fields, 3),
+                previous_hash=_field_str(fields, 4),
+            )
+        except grpc.RpcError as e:
+            if self.config.fail_mode == "open":
+                logger.warning("Audit RPC failed, failing open: %s", e)
+                return AuditRecord(event_id="", sequence_id=0, record_hash="", previous_hash="")
+            raise ProblemDetailError(
+                title="Audit Error",
+                status=500,
+                detail=str(e),
+                type_uri="https://coresdk.io/errors/audit",
+            ) from e
+
+    # -----------------------------------------------------------------
+    # Feature Flags (gRPC)
+    # -----------------------------------------------------------------
+
+    def evaluate_flag(
+        self,
+        flag_key: str,
+        tenant_id: str = "",
+        user_id: str = "",
+        attributes: dict | None = None,
+    ) -> FlagDecision:
+        """Evaluate a feature flag via the sidecar gRPC (not HTTP fallback)."""
+        channel = self._get_channel()
+        if channel is None:
+            return FlagDecision(enabled=True, variant="", reason="fail-open")
+        try:
+            payload = (
+                _encode_string(1, flag_key)
+                + _encode_string(2, tenant_id or self.config.tenant_id)
+                + _encode_string(3, user_id)
+                + _encode_string(4, json.dumps(attributes or {}))
+            )
+            stub = channel.unary_unary(
+                "/coresdk.v1.FlagService/Evaluate",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            fields = _decode_fields(response_bytes)
+            return FlagDecision(
+                enabled=_field_bool(fields, 1),
+                variant=_field_str(fields, 2),
+                reason=_field_str(fields, 3),
+            )
+        except grpc.RpcError as e:
+            if self.config.fail_mode == "open":
+                logger.warning("Flag RPC failed, failing open: %s", e)
+                return FlagDecision(enabled=True, variant="", reason="fail-open")
+            raise ProblemDetailError(
+                title="Flag Error",
+                status=500,
+                detail=str(e),
+                type_uri="https://coresdk.io/errors/flags",
+            ) from e
+
+    # -----------------------------------------------------------------
+    # License
+    # -----------------------------------------------------------------
+
+    def check_entitlement(
+        self,
+        entitlement_key: str,
+        tenant_id: str = "",
+    ) -> LicenseInfo:
+        """Check a license entitlement via the sidecar."""
+        channel = self._get_channel()
+        if channel is None:
+            return LicenseInfo(entitled=True, numeric_value=0, expires_at=0, plan="")
+        try:
+            payload = (
+                _encode_string(1, entitlement_key)
+                + _encode_string(2, tenant_id or self.config.tenant_id)
+            )
+            stub = channel.unary_unary(
+                "/coresdk.v1.LicenseService/CheckEntitlement",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            fields = _decode_fields(response_bytes)
+            return LicenseInfo(
+                entitled=_field_bool(fields, 1),
+                numeric_value=_field_int(fields, 2),
+                expires_at=_field_int(fields, 3),
+                plan=_field_str(fields, 4),
+            )
+        except grpc.RpcError as e:
+            if self.config.fail_mode == "open":
+                logger.warning("License RPC failed, failing open: %s", e)
+                return LicenseInfo(entitled=True, numeric_value=0, expires_at=0, plan="")
+            raise ProblemDetailError(
+                title="License Error",
+                status=403,
+                detail=str(e),
+                type_uri="https://coresdk.io/errors/license",
+            ) from e
+
+    # -----------------------------------------------------------------
+    # Token Revocation
+    # -----------------------------------------------------------------
+
+    def revoke_token(
+        self,
+        token: str,
+        tenant_id: str = "",
+        reason: str = "",
+    ) -> bool:
+        """Revoke a JWT token via the sidecar."""
+        channel = self._get_channel()
+        if channel is None:
+            return False
+        try:
+            payload = (
+                _encode_string(1, token)
+                + _encode_string(2, tenant_id or self.config.tenant_id)
+                + _encode_string(3, reason)
+            )
+            stub = channel.unary_unary(
+                "/coresdk.v1.AuthService/RevokeToken",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            fields = _decode_fields(response_bytes)
+            return _field_bool(fields, 1)
+        except grpc.RpcError as e:
+            logger.warning("RevokeToken RPC failed: %s", e)
+            return False
+
+    def is_revoked(self, token: str) -> bool:
+        """Check if a token has been revoked."""
+        channel = self._get_channel()
+        if channel is None:
+            return False
+        try:
+            payload = _encode_string(1, token)
+            stub = channel.unary_unary(
+                "/coresdk.v1.AuthService/IsRevoked",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            fields = _decode_fields(response_bytes)
+            return _field_bool(fields, 1)
+        except grpc.RpcError as e:
+            logger.warning("IsRevoked RPC failed: %s", e)
+            return False
+
+    # -----------------------------------------------------------------
+    # SAML
+    # -----------------------------------------------------------------
+
+    def validate_saml_assertion(
+        self,
+        assertion_b64: str,
+        idp_entity_id: str = "",
+        tenant_id: str = "",
+    ) -> SamlDecision:
+        """Validate a SAML assertion via the sidecar."""
+        channel = self._get_channel()
+        if channel is None:
+            return SamlDecision(valid=False, user_id="", email="")
+        try:
+            payload = (
+                _encode_string(1, assertion_b64)
+                + _encode_string(2, idp_entity_id)
+                + _encode_string(3, tenant_id or self.config.tenant_id)
+            )
+            stub = channel.unary_unary(
+                "/coresdk.v1.AuthService/ValidateSAMLAssertion",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            fields = _decode_fields(response_bytes)
+            groups = [
+                r.decode("utf-8") if isinstance(r, bytes) else r
+                for r in fields.get(4, [])
+            ]
+            return SamlDecision(
+                valid=_field_bool(fields, 1),
+                user_id=_field_str(fields, 2),
+                email=_field_str(fields, 3),
+                groups=groups,
+                attributes=json.loads(_field_str(fields, 5) or "{}"),
+            )
+        except grpc.RpcError as e:
+            if self.config.fail_mode == "open":
+                logger.warning("SAML RPC failed, failing open: %s", e)
+                return SamlDecision(valid=False, user_id="", email="")
+            raise ProblemDetailError(
+                title="SAML Error",
+                status=401,
+                detail=str(e),
+                type_uri="https://coresdk.io/errors/saml",
+            ) from e
+
+    # -----------------------------------------------------------------
+    # Masking (via sidecar)
+    # -----------------------------------------------------------------
+
+    def mask_dict_rpc(
+        self,
+        data: dict,
+        extra_blocked_fields: list[str] | None = None,
+        extra_patterns: list[str] | None = None,
+    ) -> dict:
+        """Mask PII in a dict via the sidecar's MaskingService."""
+        channel = self._get_channel()
+        if channel is None:
+            return data
+        try:
+            payload = _encode_string(1, json.dumps(data))
+            # repeated string fields for extra_blocked_fields (tag 2) and extra_patterns (tag 3)
+            for f in extra_blocked_fields or []:
+                payload += _encode_string(2, f)
+            for p in extra_patterns or []:
+                payload += _encode_string(3, p)
+            stub = channel.unary_unary(
+                "/coresdk.v1.MaskingService/Mask",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            fields = _decode_fields(response_bytes)
+            return json.loads(_field_str(fields, 1) or "{}")
+        except grpc.RpcError as e:
+            logger.warning("Masking RPC failed: %s", e)
+            return data
+
+    def mask_string_rpc(
+        self,
+        value: str,
+        extra_patterns: list[str] | None = None,
+    ) -> str:
+        """Mask PII in a string via the sidecar's MaskingService."""
+        channel = self._get_channel()
+        if channel is None:
+            return value
+        try:
+            payload = _encode_string(1, value)
+            for p in extra_patterns or []:
+                payload += _encode_string(2, p)
+            stub = channel.unary_unary(
+                "/coresdk.v1.MaskingService/MaskString",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            fields = _decode_fields(response_bytes)
+            return _field_str(fields, 1) or value
+        except grpc.RpcError as e:
+            logger.warning("MaskString RPC failed: %s", e)
+            return value
+
+    # -----------------------------------------------------------------
+    # Authorize (combined auth + authz)
+    # -----------------------------------------------------------------
+
+    def authorize_request(
+        self,
+        token: str,
+        action: str = "",
+        resource: str = "",
+        tenant_id: str = "",
+    ) -> AuthDecision:
+        """Combined auth+authz via AuthService/Authorize."""
+        channel = self._get_channel()
+        if channel is None:
+            return AuthDecision(
+                allowed=True,
+                claims=Claims(sub="unknown", tenant_id=self.config.tenant_id, roles=[], exp=0),
+                reason="fail-open",
+            )
+        try:
+            # AuthorizeRequest: subject(1), action(2), resource(3), token(7)
+            payload = (
+                _encode_string(2, action)
+                + _encode_string(3, resource)
+                + _encode_string(7, token)
+            )
+            stub = channel.unary_unary(
+                "/coresdk.v1.AuthService/Authorize",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            # AuthorizeResponse: allowed(1), reason(2)
+            fields = _decode_fields(response_bytes)
+            allowed = _field_bool(fields, 1)
+            reason = _field_str(fields, 2)
+            return AuthDecision(
+                allowed=allowed,
+                claims=Claims(sub="", tenant_id=tenant_id or self.config.tenant_id, roles=[], exp=0)
+                if allowed
+                else None,
+                reason=reason,
+            )
+        except grpc.RpcError as e:
+            if self.config.fail_mode == "open":
+                logger.warning("Authorize RPC failed, failing open: %s", e)
+                return AuthDecision(
+                    allowed=True,
+                    claims=Claims(sub="unknown", tenant_id=self.config.tenant_id, roles=[], exp=0),
+                    reason="fail-open",
+                )
+            raise ProblemDetailError(
+                title="Forbidden", status=403, detail=str(e),
+                type_uri="https://coresdk.io/errors/forbidden",
+            ) from e
+
+    # -----------------------------------------------------------------
+    # GetJwks
+    # -----------------------------------------------------------------
+
+    def get_jwks(self) -> str:
+        """Get the cached JWKS keys from the sidecar."""
+        channel = self._get_channel()
+        if channel is None:
+            return '{"keys":[]}'
+        try:
+            # GetJwksRequest: tenant(1) — optional, send empty
+            stub = channel.unary_unary(
+                "/coresdk.v1.AuthService/GetJwks",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(b"")
+            # GetJwksResponse: jwks_json(1)
+            fields = _decode_fields(response_bytes)
+            return _field_str(fields, 1) or '{"keys":[]}'
+        except grpc.RpcError as e:
+            logger.warning("GetJwks RPC failed: %s", e)
+            return '{"keys":[]}'
+
+    # -----------------------------------------------------------------
+    # Policy DryRun
+    # -----------------------------------------------------------------
+
+    def dry_run_policy(self, rule: str, input_data: dict) -> bool:
+        """Dry-run a policy evaluation (does not enforce)."""
+        channel = self._get_channel()
+        if channel is None:
+            return True
+        try:
+            # PolicyEvaluateRequest: rule(1), input_json(2), tenant(3)
+            payload = (
+                _encode_string(1, rule)
+                + _encode_string(2, json.dumps(input_data))
+                + _encode_string(3, self.config.tenant_id)
+            )
+            stub = channel.unary_unary(
+                "/coresdk.v1.PolicyService/DryRun",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            # PolicyEvaluateResponse: result(1), reason(2), dry_run(3)
+            fields = _decode_fields(response_bytes)
+            return _field_bool(fields, 1)
+        except grpc.RpcError as e:
+            if self.config.fail_mode == "open":
+                logger.warning("DryRun RPC failed, failing open: %s", e)
+                return True
+            raise ProblemDetailError(
+                title="Policy Error", status=500, detail=str(e),
+                type_uri="https://coresdk.io/errors/policy",
+            ) from e
+
+    # -----------------------------------------------------------------
+    # GetConfig (one-shot snapshot)
+    # -----------------------------------------------------------------
+
+    def get_config(self) -> dict:
+        """Get the current config snapshot from the sidecar."""
+        channel = self._get_channel()
+        if channel is None:
+            return {}
+        try:
+            stub = channel.unary_unary(
+                "/coresdk.v1.ConfigService/GetConfig",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(b"")
+            # GetConfigResponse wraps ConfigSnapshot at tag 1
+            # ConfigSnapshot: version(1), values map(2), updated_at(3)
+            fields = _decode_fields(response_bytes)
+            # The snapshot is a nested message at field 1
+            snapshot_bytes = fields.get(1, [b""])[0]
+            if isinstance(snapshot_bytes, bytes) and snapshot_bytes:
+                snap_fields = _decode_fields(snapshot_bytes)
+                # values map is at tag 2 — but maps are complex in protobuf
+                # Fall back to returning version string for now
+                return {"version": _field_str(snap_fields, 1)}
+            return {}
+        except grpc.RpcError as e:
+            logger.warning("GetConfig RPC failed: %s", e)
+            return {}
+
+    # -----------------------------------------------------------------
+    # Tenant: ResolveTenant
+    # -----------------------------------------------------------------
+
+    def resolve_tenant(self, token: str, tenant_hint: str = "") -> dict:
+        """Resolve a tenant from a token."""
+        channel = self._get_channel()
+        if channel is None:
+            return {"tenant_id": self.config.tenant_id}
+        try:
+            # ResolveTenantRequest: token(1), tenant_hint(2)
+            payload = _encode_string(1, token) + _encode_string(2, tenant_hint)
+            stub = channel.unary_unary(
+                "/coresdk.v1.TenantService/ResolveTenant",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            # ResolveTenantResponse: tenant context at tag 1
+            fields = _decode_fields(response_bytes)
+            tenant_bytes = fields.get(1, [b""])[0]
+            if isinstance(tenant_bytes, bytes) and tenant_bytes:
+                tf = _decode_fields(tenant_bytes)
+                return {"tenant_id": _field_str(tf, 1), "tenant_name": _field_str(tf, 2)}
+            return {"tenant_id": ""}
+        except grpc.RpcError as e:
+            logger.warning("ResolveTenant RPC failed: %s", e)
+            return {"tenant_id": self.config.tenant_id}
+
+    # -----------------------------------------------------------------
+    # Tenant: ValidateIsolation
+    # -----------------------------------------------------------------
+
+    def validate_isolation(
+        self, requesting_tenant_id: str, resource_tenant_id: str
+    ) -> bool:
+        """Validate cross-tenant isolation."""
+        channel = self._get_channel()
+        if channel is None:
+            return requesting_tenant_id == resource_tenant_id
+        try:
+            # ValidateIsolationRequest: requesting_tenant_id(1), resource_tenant_id(2)
+            payload = (
+                _encode_string(1, requesting_tenant_id)
+                + _encode_string(2, resource_tenant_id)
+            )
+            stub = channel.unary_unary(
+                "/coresdk.v1.TenantService/ValidateIsolation",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload)
+            # ValidateIsolationResponse: isolated(1)
+            fields = _decode_fields(response_bytes)
+            return _field_bool(fields, 1)
+        except grpc.RpcError as e:
+            logger.warning("ValidateIsolation RPC failed: %s", e)
+            return requesting_tenant_id == resource_tenant_id

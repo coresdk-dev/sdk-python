@@ -72,6 +72,9 @@ class MaskingEngine:
     def __init__(self, config: MaskingConfig | None = None) -> None:
         self._config = config or MaskingConfig()
 
+        # Normalize allowlist to lowercase for case-insensitive matching.
+        self._allowlist_lower: frozenset[str] = frozenset(k.lower() for k in self._config.allowlist)
+
         # Build the effective blocked-field set.
         self._blocked: frozenset[str] = BLOCKED_FIELDS | frozenset(
             f.lower() for f in self._config.extra_blocked_fields
@@ -155,7 +158,7 @@ class MaskingEngine:
         result: dict[str, Any] = {}
         for key, value in data.items():
             # Allowlist mode: redact everything not in the allowlist.
-            if self._config.allowlist_mode and key not in self._config.allowlist:
+            if self._config.allowlist_mode and key.lower() not in self._allowlist_lower:
                 result[key] = REDACTED
                 continue
 

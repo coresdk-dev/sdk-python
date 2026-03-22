@@ -244,7 +244,10 @@ class SDK:
         """Check LLM messages for prompt injection patterns (local check, no sidecar needed).
 
         OWASP LLM Top 10 #1: Prompt Injection. Scans messages for known
-        injection patterns and role-sequence anomalies.
+        injection patterns, role-sequence anomalies, and indirect/context
+        injection patterns common in RAG pipelines (retrieved documents
+        containing instruction-like content: ``<INST>``, ``[SYSTEM]``,
+        ``### Instruction``, common jailbreak prefixes).
 
         Args:
             messages: List of dicts with 'role' and 'content' keys (OpenAI chat format).
@@ -269,6 +272,20 @@ class SDK:
             (r"jailbreak", "safety_bypass", "critical"),
             (r"DAN\s+mode", "safety_bypass", "critical"),
             (r"developer\s+mode", "safety_bypass", "high"),
+            # RAG / indirect prompt injection (OWASP LLM Top 10 #1 — context injection)
+            # Detects instruction-like patterns embedded in retrieved document content.
+            (r"<INST>", "context_injection", "high"),
+            (r"\[SYSTEM\]", "context_injection", "high"),
+            (r"###\s*Instruction", "context_injection", "high"),
+            (r"###\s*System", "context_injection", "high"),
+            (r"\[/INST\]", "context_injection", "medium"),
+            (r"<\|im_start\|>", "context_injection", "high"),
+            (r"<\|im_end\|>", "context_injection", "medium"),
+            (r"BEGINNING OF CONVERSATION", "context_injection", "medium"),
+            (r"ignore the above", "context_injection", "high"),
+            (r"disregard the above", "context_injection", "high"),
+            (r"the previous instructions", "context_injection", "medium"),
+            (r"assistant:\s*<", "context_injection", "high"),
         ]
         severity_order = {"none": 0, "low": 1, "medium": 2, "high": 3, "critical": 4}
         detections: list[dict] = []

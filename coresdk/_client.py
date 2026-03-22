@@ -255,23 +255,15 @@ class CoreSDKClient:
             return True
 
     def is_enabled(self, flag_key: str, tenant_id: str = "") -> bool:
-        """Check if a feature flag is enabled via the control plane flags API."""
-        try:
-            import urllib.request
+        """Check if a feature flag is enabled.
 
-            base_url = getattr(self.config, "control_plane_url", "") or ""
-            if not base_url:
-                return True  # no control plane configured, fail-open
-            url = f"{base_url}/api/v1/flags"
-            req = urllib.request.Request(url, headers={"Accept": "application/json"})  # noqa: S310
-            with urllib.request.urlopen(req, timeout=5) as resp:  # noqa: S310
-                data = json.loads(resp.read().decode())
-            flags = data.get("flags", data) if isinstance(data, dict) else data
-            if isinstance(flags, list):
-                for flag in flags:
-                    if flag.get("key") == flag_key or flag.get("name") == flag_key:
-                        return bool(flag.get("enabled", True))
-            return True  # unknown flag -> fail-open
+        Delegates to evaluate_flag() (gRPC sidecar) for consistency with all
+        other SDK methods.  Falls back to fail-open only when evaluate_flag
+        raises and fail_mode is open.
+        """
+        try:
+            result = self.evaluate_flag(flag_key, tenant_id=tenant_id)
+            return result.enabled
         except Exception:
             if getattr(self.config, "fail_mode", "open") == "closed":
                 raise

@@ -107,22 +107,20 @@ try:
             return result
 
         def on_start(self, span: Span, parent_context: Any = None) -> None:  # noqa: ANN401
-            pass
+            if hasattr(span, "attributes") and span.attributes and hasattr(span, "set_attribute"):
+                masked = self._mask_attributes(dict(span.attributes))
+                for key, value in masked.items():
+                    if value != span.attributes.get(key):
+                        span.set_attribute(key, value)
 
         def on_end(self, span: ReadableSpan) -> None:
-            if span.attributes and hasattr(span, "_attributes") and span._attributes:
-                masked = self._mask_attributes(dict(span._attributes))
-                span._attributes.clear()  # type: ignore[attr-defined]
-                span._attributes.update(masked)  # type: ignore[attr-defined]
-
-            # Issue #41: also mask span event messages/attributes
+            # Best-effort event masking — events may have immutable attributes
             if hasattr(span, "_events") and span._events:
+                import contextlib
+
                 for event in span._events:
                     if hasattr(event, "attributes") and event.attributes:
                         masked = self._mask_attributes(dict(event.attributes))
-                        import contextlib
-
-                        # immutable attributes — acceptable limitation
                         with contextlib.suppress(Exception):
                             event._attributes = masked
 

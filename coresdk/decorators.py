@@ -13,6 +13,13 @@ from coresdk.errors._rfc9457 import ProblemDetailError
 logger = logging.getLogger(__name__)
 F = TypeVar("F", bound=Callable[..., Any])
 
+try:
+    from opentelemetry import trace
+
+    _tracer = trace.get_tracer("coresdk")
+except ImportError:
+    _tracer = None
+
 
 def coresdk_route(operation: str = "") -> Callable[[F], F]:
     """Decorator for FastAPI route handlers.
@@ -32,35 +39,67 @@ def coresdk_route(operation: str = "") -> Callable[[F], F]:
     def decorator(func: F) -> F:
         @functools.wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
-            try:
-                _start_span(operation or func.__name__)
-                return await func(*args, **kwargs)
-            except ProblemDetailError:
-                raise  # already an RFC 9457 error — pass through
-            except Exception as exc:
-                logger.exception("coresdk_route[%s]: unhandled error", operation or func.__name__)
-                raise ProblemDetailError(
-                    title="Internal Server Error",
-                    status=500,
-                    detail=str(exc),
-                    type_uri="https://coresdk.io/errors/internal",
-                ) from exc
+            span_name = operation or func.__name__
+            if _tracer is not None:
+                with _tracer.start_as_current_span(span_name) as span:
+                    span.set_attribute("coresdk.operation", span_name)
+                    try:
+                        return await func(*args, **kwargs)
+                    except ProblemDetailError:
+                        raise  # already an RFC 9457 error — pass through
+                    except Exception as exc:
+                        logger.exception("coresdk_route[%s]: unhandled error", span_name)
+                        raise ProblemDetailError(
+                            title="Internal Server Error",
+                            status=500,
+                            detail=str(exc),
+                            type_uri="https://coresdk.io/errors/internal",
+                        ) from exc
+            else:
+                try:
+                    return await func(*args, **kwargs)
+                except ProblemDetailError:
+                    raise
+                except Exception as exc:
+                    logger.exception("coresdk_route[%s]: unhandled error", span_name)
+                    raise ProblemDetailError(
+                        title="Internal Server Error",
+                        status=500,
+                        detail=str(exc),
+                        type_uri="https://coresdk.io/errors/internal",
+                    ) from exc
 
         @functools.wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
-            try:
-                _start_span(operation or func.__name__)
-                return func(*args, **kwargs)
-            except ProblemDetailError:
-                raise
-            except Exception as exc:
-                logger.exception("coresdk_route[%s]: unhandled error", operation or func.__name__)
-                raise ProblemDetailError(
-                    title="Internal Server Error",
-                    status=500,
-                    detail=str(exc),
-                    type_uri="https://coresdk.io/errors/internal",
-                ) from exc
+            span_name = operation or func.__name__
+            if _tracer is not None:
+                with _tracer.start_as_current_span(span_name) as span:
+                    span.set_attribute("coresdk.operation", span_name)
+                    try:
+                        return func(*args, **kwargs)
+                    except ProblemDetailError:
+                        raise
+                    except Exception as exc:
+                        logger.exception("coresdk_route[%s]: unhandled error", span_name)
+                        raise ProblemDetailError(
+                            title="Internal Server Error",
+                            status=500,
+                            detail=str(exc),
+                            type_uri="https://coresdk.io/errors/internal",
+                        ) from exc
+            else:
+                try:
+                    return func(*args, **kwargs)
+                except ProblemDetailError:
+                    raise
+                except Exception as exc:
+                    logger.exception("coresdk_route[%s]: unhandled error", span_name)
+                    raise ProblemDetailError(
+                        title="Internal Server Error",
+                        status=500,
+                        detail=str(exc),
+                        type_uri="https://coresdk.io/errors/internal",
+                    ) from exc
 
         if inspect.iscoroutinefunction(func):
             return async_wrapper  # type: ignore[return-value]
@@ -85,98 +124,166 @@ def coresdk_service(operation: str = "") -> Callable[[F], F]:
     def decorator(func: F) -> F:
         @functools.wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
-            try:
-                _start_span(operation or func.__name__)
-                return await func(*args, **kwargs)
-            except ProblemDetailError:
-                raise
-            except ValueError as exc:
-                raise ProblemDetailError(
-                    title="Bad Request",
-                    status=400,
-                    detail=str(exc),
-                    type_uri="https://coresdk.io/errors/bad-request",
-                ) from exc
-            except PermissionError as exc:
-                raise ProblemDetailError(
-                    title="Forbidden",
-                    status=403,
-                    detail=str(exc),
-                    type_uri="https://coresdk.io/errors/forbidden",
-                ) from exc
-            except LookupError as exc:
-                raise ProblemDetailError(
-                    title="Not Found",
-                    status=404,
-                    detail=str(exc),
-                    type_uri="https://coresdk.io/errors/not-found",
-                ) from exc
-            except Exception as exc:
-                logger.exception(
-                    "coresdk_service[%s]: unhandled error",
-                    operation or func.__name__,
-                )
-                raise ProblemDetailError(
-                    title="Internal Server Error",
-                    status=500,
-                    detail=str(exc),
-                    type_uri="https://coresdk.io/errors/internal",
-                ) from exc
+            span_name = operation or func.__name__
+            if _tracer is not None:
+                with _tracer.start_as_current_span(span_name) as span:
+                    span.set_attribute("coresdk.operation", span_name)
+                    try:
+                        return await func(*args, **kwargs)
+                    except ProblemDetailError:
+                        raise
+                    except ValueError as exc:
+                        raise ProblemDetailError(
+                            title="Bad Request",
+                            status=400,
+                            detail=str(exc),
+                            type_uri="https://coresdk.io/errors/bad-request",
+                        ) from exc
+                    except PermissionError as exc:
+                        raise ProblemDetailError(
+                            title="Forbidden",
+                            status=403,
+                            detail=str(exc),
+                            type_uri="https://coresdk.io/errors/forbidden",
+                        ) from exc
+                    except LookupError as exc:
+                        raise ProblemDetailError(
+                            title="Not Found",
+                            status=404,
+                            detail=str(exc),
+                            type_uri="https://coresdk.io/errors/not-found",
+                        ) from exc
+                    except Exception as exc:
+                        logger.exception(
+                            "coresdk_service[%s]: unhandled error",
+                            span_name,
+                        )
+                        raise ProblemDetailError(
+                            title="Internal Server Error",
+                            status=500,
+                            detail=str(exc),
+                            type_uri="https://coresdk.io/errors/internal",
+                        ) from exc
+            else:
+                try:
+                    return await func(*args, **kwargs)
+                except ProblemDetailError:
+                    raise
+                except ValueError as exc:
+                    raise ProblemDetailError(
+                        title="Bad Request",
+                        status=400,
+                        detail=str(exc),
+                        type_uri="https://coresdk.io/errors/bad-request",
+                    ) from exc
+                except PermissionError as exc:
+                    raise ProblemDetailError(
+                        title="Forbidden",
+                        status=403,
+                        detail=str(exc),
+                        type_uri="https://coresdk.io/errors/forbidden",
+                    ) from exc
+                except LookupError as exc:
+                    raise ProblemDetailError(
+                        title="Not Found",
+                        status=404,
+                        detail=str(exc),
+                        type_uri="https://coresdk.io/errors/not-found",
+                    ) from exc
+                except Exception as exc:
+                    logger.exception(
+                        "coresdk_service[%s]: unhandled error",
+                        span_name,
+                    )
+                    raise ProblemDetailError(
+                        title="Internal Server Error",
+                        status=500,
+                        detail=str(exc),
+                        type_uri="https://coresdk.io/errors/internal",
+                    ) from exc
 
         @functools.wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
-            try:
-                _start_span(operation or func.__name__)
-                return func(*args, **kwargs)
-            except ProblemDetailError:
-                raise
-            except ValueError as exc:
-                raise ProblemDetailError(
-                    title="Bad Request",
-                    status=400,
-                    detail=str(exc),
-                    type_uri="https://coresdk.io/errors/bad-request",
-                ) from exc
-            except PermissionError as exc:
-                raise ProblemDetailError(
-                    title="Forbidden",
-                    status=403,
-                    detail=str(exc),
-                    type_uri="https://coresdk.io/errors/forbidden",
-                ) from exc
-            except LookupError as exc:
-                raise ProblemDetailError(
-                    title="Not Found",
-                    status=404,
-                    detail=str(exc),
-                    type_uri="https://coresdk.io/errors/not-found",
-                ) from exc
-            except Exception as exc:
-                logger.exception(
-                    "coresdk_service[%s]: unhandled error",
-                    operation or func.__name__,
-                )
-                raise ProblemDetailError(
-                    title="Internal Server Error",
-                    status=500,
-                    detail=str(exc),
-                    type_uri="https://coresdk.io/errors/internal",
-                ) from exc
+            span_name = operation or func.__name__
+            if _tracer is not None:
+                with _tracer.start_as_current_span(span_name) as span:
+                    span.set_attribute("coresdk.operation", span_name)
+                    try:
+                        return func(*args, **kwargs)
+                    except ProblemDetailError:
+                        raise
+                    except ValueError as exc:
+                        raise ProblemDetailError(
+                            title="Bad Request",
+                            status=400,
+                            detail=str(exc),
+                            type_uri="https://coresdk.io/errors/bad-request",
+                        ) from exc
+                    except PermissionError as exc:
+                        raise ProblemDetailError(
+                            title="Forbidden",
+                            status=403,
+                            detail=str(exc),
+                            type_uri="https://coresdk.io/errors/forbidden",
+                        ) from exc
+                    except LookupError as exc:
+                        raise ProblemDetailError(
+                            title="Not Found",
+                            status=404,
+                            detail=str(exc),
+                            type_uri="https://coresdk.io/errors/not-found",
+                        ) from exc
+                    except Exception as exc:
+                        logger.exception(
+                            "coresdk_service[%s]: unhandled error",
+                            span_name,
+                        )
+                        raise ProblemDetailError(
+                            title="Internal Server Error",
+                            status=500,
+                            detail=str(exc),
+                            type_uri="https://coresdk.io/errors/internal",
+                        ) from exc
+            else:
+                try:
+                    return func(*args, **kwargs)
+                except ProblemDetailError:
+                    raise
+                except ValueError as exc:
+                    raise ProblemDetailError(
+                        title="Bad Request",
+                        status=400,
+                        detail=str(exc),
+                        type_uri="https://coresdk.io/errors/bad-request",
+                    ) from exc
+                except PermissionError as exc:
+                    raise ProblemDetailError(
+                        title="Forbidden",
+                        status=403,
+                        detail=str(exc),
+                        type_uri="https://coresdk.io/errors/forbidden",
+                    ) from exc
+                except LookupError as exc:
+                    raise ProblemDetailError(
+                        title="Not Found",
+                        status=404,
+                        detail=str(exc),
+                        type_uri="https://coresdk.io/errors/not-found",
+                    ) from exc
+                except Exception as exc:
+                    logger.exception(
+                        "coresdk_service[%s]: unhandled error",
+                        span_name,
+                    )
+                    raise ProblemDetailError(
+                        title="Internal Server Error",
+                        status=500,
+                        detail=str(exc),
+                        type_uri="https://coresdk.io/errors/internal",
+                    ) from exc
 
         if inspect.iscoroutinefunction(func):
             return async_wrapper  # type: ignore[return-value]
         return sync_wrapper  # type: ignore[return-value]
 
     return decorator
-
-
-def _start_span(name: str) -> None:
-    """Best-effort OTel span creation — no-op if OTel not installed."""
-    try:
-        from opentelemetry import trace
-
-        tracer = trace.get_tracer("coresdk")
-        span = tracer.start_span(name)
-        span.set_attribute("coresdk.operation", name)
-    except ImportError:
-        pass

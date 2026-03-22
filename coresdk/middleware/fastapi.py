@@ -81,9 +81,11 @@ try:
             shadow_mode: bool = False,
             pii_masking: bool = True,
             debug_headers: bool | None = None,
+            inject_headers: bool = True,
         ):
             super().__init__(app)
             self.sdk = sdk
+            self.inject_headers = inject_headers
             if exclude_paths is not None:
                 self.exclude_paths = exclude_paths
             elif hasattr(sdk, "config") and hasattr(sdk.config, "exclude_paths"):
@@ -204,6 +206,19 @@ try:
                     _current_request_id.reset(rid_token)
                     return resp
                 request.state.coresdk_tenant = getattr(claims, "tenant_id", "")
+
+                # Inject tenant/user headers for downstream services
+                if self.inject_headers and decision is not None and decision.allowed:
+                    tenant_id = getattr(request.state, "coresdk_tenant", "")
+                    user_id = ""
+                    if decision.claims is not None:
+                        user_id = getattr(decision.claims, "sub", "") or getattr(decision.claims, "subject", "")
+                    raw_headers = list(request.scope.get("headers", []))
+                    if tenant_id:
+                        raw_headers.append((b"x-tenant-id", tenant_id.encode()))
+                    if user_id:
+                        raw_headers.append((b"x-user-uuid", user_id.encode()))
+                    request.scope["headers"] = raw_headers
 
                 # Trial state injection
                 try:

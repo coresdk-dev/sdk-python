@@ -22,6 +22,7 @@ dependencies = [
 fastapi = ["fastapi>=0.100.0", "starlette>=0.27.0"]
 flask = ["flask>=2.3.0"]
 django = ["django>=4.2.0"]
+grpc = ["grpcio-tools>=1.60.0,<2.0.0"]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",

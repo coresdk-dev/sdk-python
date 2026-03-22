@@ -22,7 +22,7 @@ from coresdk._types import (
 )
 from coresdk.errors._rfc9457 import ProblemDetailError
 from coresdk.logging import coresdk_structlog_processor
-from coresdk.masking import MaskingConfig, MaskingEngine, mask_dict, mask_string
+from coresdk.masking import MaskingConfig, MaskingEngine, mask_dict, mask_llm_content, mask_string
 from coresdk.middleware.django import CoreSDKMiddleware as DjangoMiddleware
 from coresdk.middleware.flask import CoreSDKFlask, require_auth
 from coresdk.tracing.decorator import trace
@@ -47,6 +47,7 @@ __all__ = [
     "get_current_user",
     "get_request_id",
     "mask_dict",
+    "mask_llm_content",
     "mask_string",
     "require_auth",
     "trace",
@@ -318,6 +319,61 @@ class SDK:
         that prefix are automatically redacted.
         """
         return self._masking_engine.mask_string(value)
+
+    def check_prompt(
+        self,
+        messages: list[dict],
+        *,
+        custom_patterns: list[str] | None = None,
+    ) -> dict:
+        """Detect prompt injection attempts in LLM messages (local, no sidecar).
+
+        Scans each message's ``content`` field for common injection patterns
+        such as "ignore previous instructions", "reveal your prompt", role
+        manipulation, and delimiter-based jailbreaks.
+
+        Returns a dict with keys:
+        - ``safe`` (bool): True if no injection patterns detected.
+        - ``risk`` (str): One of ``"none"``, ``"low"``, ``"medium"``, ``"high"``.
+        - ``detections`` (list[dict]): Each entry has ``pattern`` and ``message_index``.
+        """
+        import re
+
+        _INJECTION_PATTERNS = [
+            (r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|context)", "high"),
+            (r"reveal\s+(your\s+)?(system\s+)?prompt", "high"),
+            (r"you\s+are\s+now\s+(?!an?\s+AI)", "medium"),
+            (r"pretend\s+(you\s+are|to\s+be)", "medium"),
+            (r"act\s+as\s+(if\s+you\s+(are|were)|a\s+)", "medium"),
+            (r"(DAN|jailbreak|prompt\s+injection)", "high"),
+            (r"(</?(system|assistant|user|human)>|\[INST\]|\[/INST\])", "medium"),
+            (r"forget\s+(everything|all)\s+(you|I|we)\s+(know|said|discussed)", "medium"),
+        ]
+
+        _compiled = custom_patterns or []
+        all_patterns = [(re.compile(p, re.IGNORECASE), sev) for p, sev in _INJECTION_PATTERNS]
+        for cp in _compiled:
+            all_patterns.append((re.compile(cp, re.IGNORECASE), "medium"))
+
+        detections = []
+        severity_rank = {"none": 0, "low": 1, "medium": 2, "high": 3}
+        max_sev = "none"
+
+        for idx, msg in enumerate(messages):
+            content = msg.get("content", "") if isinstance(msg, dict) else ""
+            if not isinstance(content, str):
+                continue
+            for pat, sev in all_patterns:
+                if pat.search(content):
+                    detections.append({"pattern": pat.pattern, "message_index": idx, "severity": sev})
+                    if severity_rank[sev] > severity_rank[max_sev]:
+                        max_sev = sev
+
+        return {
+            "safe": len(detections) == 0,
+            "risk": max_sev,
+            "detections": detections,
+        }
 
     @contextmanager
     def tenant_scope(self, tenant_id: str, user_id: str = "") -> Iterator[None]:

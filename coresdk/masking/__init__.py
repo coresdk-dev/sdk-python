@@ -34,6 +34,7 @@ __all__ = [
     "MaskingConfig",
     "MaskingEngine",
     "mask_dict",
+    "mask_llm_content",
     "mask_string",
 ]
 
@@ -237,3 +238,32 @@ def mask_string(value: str, config: MaskingConfig | None = None) -> str:
     return _engine(config).mask_string(value)
 
 
+def mask_llm_content(
+    content: str | list[dict],
+    config: MaskingConfig | None = None,
+) -> str | list[dict]:
+    """Mask PII in LLM prompt/response content.
+
+    Accepts either a plain string or a list of message dicts (OpenAI/Anthropic format).
+    In message-dict mode each message's ``content`` field is masked in place.
+
+    Examples::
+
+        safe = mask_llm_content("My SSN is 123-45-6789")
+        # Returns: "My SSN is [REDACTED]"
+
+        messages = [{"role": "user", "content": "email me at user@corp.com"}]
+        safe_messages = mask_llm_content(messages)
+        # Returns: [{"role": "user", "content": "email me at [REDACTED]"}]
+    """
+    engine = _engine(config)
+    if isinstance(content, str):
+        return engine.mask_string(content)
+    # List of message dicts (OpenAI/Anthropic chat format)
+    result = []
+    for msg in content:
+        if isinstance(msg, dict) and isinstance(msg.get("content"), str):
+            result.append({**msg, "content": engine.mask_string(msg["content"])})
+        else:
+            result.append(msg)
+    return result

@@ -14,6 +14,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any, TypeVar, overload
 
+from coresdk.errors._rfc9457 import ProblemDetailError
+
 logger = logging.getLogger(__name__)
 
 F = TypeVar("F", bound=Callable[..., Any])
@@ -167,7 +169,7 @@ class CircuitBreakerRegistry:
                 ...
 
         Raises:
-            RuntimeError: When the circuit is OPEN at call time.
+            ProblemDetailError: When the circuit is OPEN at call time (HTTP 503).
         """
         cb = self.get_or_create(name, **kwargs)
 
@@ -176,7 +178,12 @@ class CircuitBreakerRegistry:
             async def wrapper(*args: Any, **kw: Any) -> Any:  # noqa: ANN401
                 current = cb.state
                 if current is CircuitState.OPEN:
-                    raise RuntimeError(f"Circuit breaker {cb.name!r} is OPEN — call rejected")
+                    raise ProblemDetailError(
+                        "Service Unavailable",
+                        503,
+                        detail=f"Circuit breaker {cb.name!r} is OPEN — call rejected",
+                        type_uri="https://coresdk.io/errors/circuit-open",
+                    )
                 try:
                     result = await func(*args, **kw)
                 except Exception:
@@ -283,7 +290,7 @@ def circuit_breaker(
             ...
 
     Raises:
-        RuntimeError: When the circuit is OPEN at call time.
+        ProblemDetailError: When the circuit is OPEN at call time (HTTP 503).
     """
 
     def decorator(func: F) -> F:
@@ -297,7 +304,12 @@ def circuit_breaker(
         async def wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
             current = cb.state
             if current is CircuitState.OPEN:
-                raise RuntimeError(f"Circuit breaker {cb.name!r} is OPEN — call rejected")
+                raise ProblemDetailError(
+                    "Service Unavailable",
+                    503,
+                    detail=f"Circuit breaker {cb.name!r} is OPEN — call rejected",
+                    type_uri="https://coresdk.io/errors/circuit-open",
+                )
             try:
                 result = await func(*args, **kwargs)
             except Exception:

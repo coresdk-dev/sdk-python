@@ -82,13 +82,19 @@ class SDK:
         config = SDKConfig.from_env()
         return cls(config)
 
-    def authorize(self, token: str, *, action: str = "", resource: str = "") -> AuthDecision:
+    def authorize(
+        self, token: str, *, action: str = "", resource: str = "", tenant_id: str = ""
+    ) -> AuthDecision:
         """Validate a JWT and authorize the request."""
-        return self._client.validate_token(token, action=action, resource=resource)
+        return self._client.validate_token(
+            token, action=action, resource=resource, tenant_id=tenant_id
+        )
 
-    def authorize_sync(self, token: str, *, action: str = "", resource: str = "") -> AuthDecision:
+    def authorize_sync(
+        self, token: str, *, action: str = "", resource: str = "", tenant_id: str = ""
+    ) -> AuthDecision:
         """Synchronous authorize — same as authorize() since the SDK is currently sync."""
-        return self.authorize(token, action=action, resource=resource)
+        return self.authorize(token, action=action, resource=resource, tenant_id=tenant_id)
 
     def evaluate_policy(self, rule: str, input_data: dict) -> bool:
         """Evaluate a Rego policy rule."""

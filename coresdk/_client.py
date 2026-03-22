@@ -147,7 +147,9 @@ class CoreSDKClient:
                 raise
         return self._channel
 
-    def validate_token(self, token: str, *, action: str = "", resource: str = "") -> AuthDecision:
+    def validate_token(
+        self, token: str, *, action: str = "", resource: str = "", tenant_id: str = ""
+    ) -> AuthDecision:
         channel = self._get_channel()
         if channel is None:
             return AuthDecision(
@@ -159,7 +161,7 @@ class CoreSDKClient:
             # ValidateTokenRequest: token(1), tenant_id(2), resource(3), action(4)
             payload = (
                 _encode_string(1, token)
-                + _encode_string(2, self.config.tenant_id)
+                + _encode_string(2, tenant_id or self.config.tenant_id)
                 + _encode_string(3, resource)
                 + _encode_string(4, action)
             )
@@ -747,9 +749,18 @@ class CoreSDKClient:
             snapshot_bytes = fields.get(1, [b""])[0]
             if isinstance(snapshot_bytes, bytes) and snapshot_bytes:
                 snap_fields = _decode_fields(snapshot_bytes)
-                # values map is at tag 2 — but maps are complex in protobuf
-                # Fall back to returning version string for now
-                return {"version": _field_str(snap_fields, 1)}
+                version = _field_str(snap_fields, 1)
+                # values is a map<string,string> at tag 2
+                # Each entry is a length-delimited message: key(1), value(2)
+                values: dict[str, str] = {}
+                for entry_bytes in snap_fields.get(2, []):
+                    if isinstance(entry_bytes, bytes):
+                        entry_fields = _decode_fields(entry_bytes)
+                        k = _field_str(entry_fields, 1)
+                        v = _field_str(entry_fields, 2)
+                        if k:
+                            values[k] = v
+                return {"version": version, **values}
             return {}
         except grpc.RpcError as e:
             logger.warning("GetConfig RPC failed: %s", e)

@@ -104,6 +104,15 @@ try:
 
                 provider = trace.get_tracer_provider()
                 if hasattr(provider, "add_span_processor"):
+                    # Warn if the provider has no exporters — processor will no-op silently
+                    if not getattr(provider, "_active_span_processor", None) and not getattr(
+                        provider, "_span_processors", None
+                    ):
+                        logger.warning(
+                            "PIIMaskingSpanProcessor registered but TracerProvider has no "
+                            "exporters configured. Call trace.set_tracer_provider() before "
+                            "app.add_middleware() to ensure PII masking is active."
+                        )
                     provider.add_span_processor(PIIMaskingSpanProcessor())
                     logger.debug("PIIMaskingSpanProcessor auto-wired")
             except ImportError:

@@ -1,7 +1,7 @@
 """MockSDK, FakeSpanExporter, assert_no_pii — no sidecar needed for tests."""
 
 import re
-from typing import Any, ClassVar
+from typing import Any
 
 from coresdk._types import (
     AuditRecord,
@@ -31,6 +31,7 @@ class MockSDK:
         self.fail_mode = fail_mode
         self.authorize_calls: list[dict] = []
         self.policy_calls: list[dict] = []
+        self.config = self._MockConfig()
 
     def set_token_decision(self, token: str, decision: AuthDecision) -> None:
         """Override the AuthDecision returned for a specific token."""
@@ -41,6 +42,12 @@ class MockSDK:
     def set_token_rejected(self, token: str, reason: str = "rejected") -> None:
         """Make a specific token return allowed=False."""
         self.set_token_decision(token, AuthDecision(allowed=False, claims=None, reason=reason))
+
+    def set_policy_result(self, rule: str, result: bool) -> None:
+        """Override the result of dry_run_policy / evaluate_policy for a specific rule."""
+        if not hasattr(self, "_policy_overrides"):
+            self._policy_overrides: dict[str, bool] = {}
+        self._policy_overrides[rule] = result
 
     def authorize(self, token: str, **kwargs: Any) -> AuthDecision:  # noqa: ANN401
         self.authorize_calls.append({"token": token, **kwargs})
@@ -59,7 +66,8 @@ class MockSDK:
 
     def evaluate_policy(self, rule: str, input_data: dict) -> bool:
         self.policy_calls.append({"rule": rule, "input": input_data})
-        return True
+        overrides: dict[str, bool] = getattr(self, "_policy_overrides", {})
+        return overrides.get(rule, True)
 
     def is_enabled(self, flag_key: str, tenant_id: str = "") -> bool:
         return True
@@ -118,7 +126,8 @@ class MockSDK:
         return '{"keys":[]}'
 
     def dry_run_policy(self, rule: str, input_data: dict) -> bool:
-        return True
+        overrides: dict[str, bool] = getattr(self, "_policy_overrides", {})
+        return overrides.get(rule, True)
 
     def get_config(self) -> dict:
         return {"version": "mock"}
@@ -140,12 +149,13 @@ class MockSDK:
         return value
 
     class _MockConfig:
-        fail_mode: ClassVar[str] = "open"
-        dev_mode: ClassVar[bool] = True
-        tenant_id: ClassVar[str] = "test"
-        service_name: ClassVar[str] = "test-service"
+        def __init__(self) -> None:
+            self.fail_mode: str = "open"
+            self.dev_mode: bool = True
+            self.tenant_id: str = "test"
+            self.service_name: str = "test-service"
 
-    config = _MockConfig()
+    config: _MockConfig
 
 
 class FakeSpanExporter:

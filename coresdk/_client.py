@@ -118,6 +118,11 @@ class CoreSDKClient:
     def __init__(self, config: SDKConfig) -> None:
         self.config = config
         self._channel = None
+        self._metadata: list[tuple[str, str]] = [
+            ("x-service-name", config.service_name),
+        ]
+        if config.service_token:
+            self._metadata.append(("x-service-token", config.service_token))
 
     def _get_channel(self) -> grpc.Channel | None:
         if self._channel is None:
@@ -172,7 +177,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
 
             # ValidateTokenResponse: valid(1), subject(2), roles(3), claims_map(4), expires_at(5)
             fields = _decode_fields(response_bytes)
@@ -271,7 +276,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
 
             # EvaluatePolicyResponse: allowed(1), result_json(2)
             fields = _decode_fields(response_bytes)
@@ -336,7 +341,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             fields = _decode_fields(response_bytes)
             return RateLimitDecision(
                 allowed=_field_bool(fields, 1),
@@ -388,13 +393,15 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             fields = _decode_fields(response_bytes)
             return AuditRecord(
                 event_id=_field_str(fields, 1),
                 sequence_id=_field_int(fields, 2),
                 record_hash=_field_str(fields, 3),
                 previous_hash=_field_str(fields, 4),
+                action=_field_str(fields, 5) or action,
+                tenant_id=_field_str(fields, 6) or tenant_id or self.config.tenant_id,
             )
         except grpc.RpcError as e:
             if self.config.fail_mode == "open":
@@ -434,7 +441,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             fields = _decode_fields(response_bytes)
             return FlagDecision(
                 enabled=_field_bool(fields, 1),
@@ -474,7 +481,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             fields = _decode_fields(response_bytes)
             return LicenseInfo(
                 entitled=_field_bool(fields, 1),
@@ -518,7 +525,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)
         except grpc.RpcError as e:
@@ -537,7 +544,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)
         except grpc.RpcError as e:
@@ -569,7 +576,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             fields = _decode_fields(response_bytes)
             groups = [r.decode("utf-8") if isinstance(r, bytes) else r for r in fields.get(4, [])]
             return SamlDecision(
@@ -616,7 +623,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             fields = _decode_fields(response_bytes)
             result: dict = json.loads(_field_str(fields, 1) or "{}")
             return result
@@ -642,7 +649,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             fields = _decode_fields(response_bytes)
             return _field_str(fields, 1) or value
         except grpc.RpcError as e:
@@ -680,7 +687,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             # AuthorizeResponse: allowed(1), reason(2), subject(3), roles(4), tenant_id(5)
             fields = _decode_fields(response_bytes)
             allowed = _field_bool(fields, 1)
@@ -760,7 +767,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             # PolicyEvaluateResponse: result(1), reason(2), dry_run(3)
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)
@@ -833,7 +840,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             # ResolveTenantResponse: tenant context at tag 1
             fields = _decode_fields(response_bytes)
             tenant_bytes = fields.get(1, [b""])[0]
@@ -864,7 +871,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(payload)
+            response_bytes = stub(payload, metadata=self._metadata)
             # ValidateIsolationResponse: isolated(1)
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)

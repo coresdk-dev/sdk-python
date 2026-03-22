@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -20,10 +21,36 @@ class Claims:
     # Raw map of all other claims returned by the sidecar
     extra: dict[str, Any] = field(default_factory=dict)
 
+    @property
+    def exp_at(self) -> datetime:
+        """Expiry as a timezone-aware datetime."""
+        return datetime.fromtimestamp(self.exp, tz=UTC)
+
+    @property
+    def is_expired(self) -> bool:
+        """True if the token has expired."""
+        return self.exp > 0 and datetime.now(UTC) > self.exp_at
+
     @classmethod
     def empty(cls, tenant_id: str = "") -> Claims:
         """Return a safe empty Claims used on denied/error decisions."""
         return cls(sub="", tenant_id=tenant_id, roles=[], exp=0)
+
+    @classmethod
+    def from_dict(cls, d: dict) -> Claims:
+        """Construct Claims from a plain dict (e.g., MockSDK default_claims)."""
+        return cls(
+            sub=str(d.get("sub", "")),
+            tenant_id=str(d.get("tenant_id", "")),
+            roles=list(d.get("roles", [])),
+            exp=int(d.get("exp", 0)),
+            email=str(d.get("email", "")),
+            scopes=list(d.get("scopes", [])),
+            extra={
+                k: v for k, v in d.items()
+                if k not in {"sub", "tenant_id", "roles", "exp", "email", "scopes"}
+            },
+        )
 
 
 @dataclass
@@ -55,6 +82,9 @@ class AuditRecord:
     sequence_id: int = 0
     record_hash: str = ""
     previous_hash: str = ""
+    action: str = ""
+    tenant_id: str = ""
+    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass

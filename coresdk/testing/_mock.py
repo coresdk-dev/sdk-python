@@ -25,6 +25,8 @@ class MockSDK:
         fail_mode: str = "open",
     ) -> None:
         self.default_allow = default_allow
+        if isinstance(default_claims, dict):
+            default_claims = Claims.from_dict(default_claims)
         self.default_claims = default_claims or Claims(
             sub="test-user", tenant_id="", roles=["user"], exp=0
         )
@@ -79,7 +81,12 @@ class MockSDK:
 
     def emit_audit_event(self, **kwargs: Any) -> AuditRecord:  # noqa: ANN401
         return AuditRecord(
-            event_id="mock-id", sequence_id=0, record_hash="mock", previous_hash="genesis"
+            event_id="mock-id",
+            sequence_id=0,
+            record_hash="mock",
+            previous_hash="genesis",
+            action=kwargs.get("action", ""),
+            tenant_id=kwargs.get("tenant_id", ""),
         )
 
     def evaluate_flag(
@@ -201,9 +208,10 @@ class CaptureAuditDrain:
         self.events.clear()
 
     def get_events(self, action: str | None = None) -> list[AuditRecord]:
+        """Return captured events, optionally filtered by event_id substring match."""
         if action is None:
             return list(self.events)
-        return [e for e in self.events if hasattr(e, "event_id")]  # filter by action pattern
+        return [e for e in self.events if action in e.event_id]
 
     @property
     def count(self) -> int:

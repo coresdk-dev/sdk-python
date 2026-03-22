@@ -4,10 +4,6 @@ import json
 from typing import Any
 
 
-class CoreSDKError(Exception):
-    """General CoreSDK error — raised on fail-closed paths."""
-
-
 class ProblemDetailError(Exception):
     """RFC 9457 Problem Details for HTTP APIs."""
 
@@ -60,3 +56,19 @@ class ProblemDetailError(Exception):
 
     def __repr__(self) -> str:
         return f"ProblemDetailError(status={self.status}, title={self.title!r})"
+
+
+class CoreSDKError(ProblemDetailError):
+    """Fail-closed sentinel — raised when sidecar is unreachable and fail_mode='closed'.
+
+    Subclasses ProblemDetailError(503) so fail-closed errors produce RFC 9457 JSON
+    rather than a plain traceback.
+    """
+
+    def __init__(self, detail: str = "CoreSDK sidecar unavailable") -> None:
+        super().__init__(
+            "Service Unavailable",
+            503,
+            detail=detail,
+            type_uri="https://coresdk.io/errors/sidecar-unavailable",
+        )

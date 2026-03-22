@@ -73,3 +73,12 @@ class SamlDecision:
     email: str = ""
     groups: list[str] = field(default_factory=list)
     attributes: dict[str, str] = field(default_factory=dict)
+
+
+@dataclass
+class TrialState:
+    """Trial/grace period information derived from license token."""
+
+    is_trial: bool = False
+    trial_ends_at: int = 0
+    days_remaining: int = 0

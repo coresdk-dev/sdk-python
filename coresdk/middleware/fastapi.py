@@ -1,7 +1,12 @@
 """FastAPI middleware adapter — JWT auth + span creation + RFC 9457 errors."""
 
 import logging
+import os
+import uuid
 from collections.abc import Callable
+
+from coresdk._context import _current_request_id
+from coresdk._types import TrialState
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +80,7 @@ try:
             fallback_on_sidecar_error: bool = True,
             shadow_mode: bool = False,
             pii_masking: bool = True,
+            debug_headers: bool | None = None,
         ):
             super().__init__(app)
             self.sdk = sdk
@@ -82,6 +88,10 @@ try:
             self.fallback_validator = fallback_validator
             self.fallback_on_sidecar_error = fallback_on_sidecar_error
             self.shadow_mode = shadow_mode
+            if debug_headers is None:
+                self.debug_headers = os.environ.get("CORESDK_ENV") == "development"
+            else:
+                self.debug_headers = debug_headers
             if pii_masking:
                 self._auto_wire_pii_masking()
 
@@ -103,6 +113,12 @@ try:
             if request.url.path in self.exclude_paths:
                 return await call_next(request)
 
+            # Request ID propagation
+            incoming_id = request.headers.get("X-Request-ID", "")
+            request_id = incoming_id or str(uuid.uuid4())
+            rid_token = _current_request_id.set(request_id)
+            request.state.request_id = request_id
+
             auth_header = request.headers.get("Authorization", "")
             token = ""
             if auth_header.startswith("Bearer "):
@@ -111,8 +127,11 @@ try:
             if not token:
                 # In shadow mode with fallback, let fallback handle missing token
                 if self.shadow_mode and self.fallback_validator:
-                    return await call_next(request)
-                return JSONResponse(
+                    response = await call_next(request)
+                    response.headers["X-Request-ID"] = request_id
+                    _current_request_id.reset(rid_token)
+                    return response
+                resp = JSONResponse(
                     status_code=401,
                     content={
                         "type": "https://coresdk.io/errors/unauthorized",
@@ -122,11 +141,19 @@ try:
                     },
                     media_type="application/problem+json",
                 )
+                resp.headers["X-Request-ID"] = request_id
+                _current_request_id.reset(rid_token)
+                return resp
 
             # Shadow mode: validate with both, log discrepancies, use fallback result
             if self.shadow_mode and self.fallback_validator:
-                return await self._dispatch_shadow(request, call_next, token)
+                response = await self._dispatch_shadow(request, call_next, token)
+                response.headers["X-Request-ID"] = request_id
+                _current_request_id.reset(rid_token)
+                return response
 
+            decision = None
+            debug_info = None
             try:
                 decision = self.sdk.authorize(token)
                 claims = decision.claims if hasattr(decision, "claims") else decision
@@ -143,10 +170,13 @@ try:
                     fallback_result = self.fallback_validator(token)
                     if fallback_result:
                         request.state.coresdk_user = fallback_result
-                        return await call_next(request)
+                        response = await call_next(request)
+                        response.headers["X-Request-ID"] = request_id
+                        _current_request_id.reset(rid_token)
+                        return response
 
                 if not decision.allowed and decision.reason != "fail-open":
-                    return JSONResponse(
+                    resp = JSONResponse(
                         status_code=403,
                         content={
                             "type": "https://coresdk.io/errors/forbidden",
@@ -156,16 +186,38 @@ try:
                         },
                         media_type="application/problem+json",
                     )
+                    resp.headers["X-Request-ID"] = request_id
+                    _current_request_id.reset(rid_token)
+                    return resp
                 request.state.coresdk_tenant = (
                     claims.get("tenant_id", "")
                     if isinstance(claims, dict)
                     else getattr(claims, "tenant_id", "")
                 )
+
+                # Trial state injection
+                try:
+                    trial_info = self.sdk.check_entitlement("__trial__")
+                    if trial_info.expires_at > 0:
+                        import time
+
+                        days = max(0, int((trial_info.expires_at - time.time()) / 86400))
+                        request.state.coresdk_trial = TrialState(
+                            is_trial=True,
+                            trial_ends_at=trial_info.expires_at,
+                            days_remaining=days,
+                        )
+                except Exception:  # noqa: S110
+                    pass  # no license configured or trial not applicable
+
             except Exception as e:
                 if self.sdk.config.fail_mode == "open":
                     logger.warning("Auth failed, failing open: %s", e)
-                    return await call_next(request)
-                return JSONResponse(
+                    response = await call_next(request)
+                    response.headers["X-Request-ID"] = request_id
+                    _current_request_id.reset(rid_token)
+                    return response
+                resp = JSONResponse(
                     status_code=401,
                     content={
                         "type": "https://coresdk.io/errors/unauthorized",
@@ -175,8 +227,40 @@ try:
                     },
                     media_type="application/problem+json",
                 )
+                resp.headers["X-Request-ID"] = request_id
+                _current_request_id.reset(rid_token)
+                return resp
 
-            return await call_next(request)
+            # Debug trace headers
+            if self.debug_headers:
+                import base64
+                import json
+                import time
+
+                debug_info = {
+                    "request_id": request_id,
+                    "auth": (
+                        {"allowed": decision.allowed, "reason": decision.reason}
+                        if decision is not None
+                        else None
+                    ),
+                    "tenant_id": getattr(request.state, "coresdk_tenant", ""),
+                    "timestamp": time.time(),
+                }
+
+            response = await call_next(request)
+            response.headers["X-Request-ID"] = request_id
+
+            if self.debug_headers and debug_info:
+                import base64
+                import json
+
+                response.headers["X-Coresdk-Debug"] = base64.b64encode(
+                    json.dumps(debug_info).encode()
+                ).decode()
+
+            _current_request_id.reset(rid_token)
+            return response
 
         async def _dispatch_shadow(self, request: Request, call_next, token: str):
             """Shadow mode: validate with both CoreSDK and fallback, log discrepancies."""

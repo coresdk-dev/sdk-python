@@ -4,9 +4,12 @@ from __future__ import annotations
 
 import functools
 import logging
+import uuid
 from collections.abc import Callable
 from typing import Any
 
+from coresdk._context import _current_request_id
+from coresdk._types import TrialState
 from coresdk.errors._rfc9457 import ProblemDetailError
 
 logger = logging.getLogger(__name__)
@@ -65,9 +68,16 @@ class CoreSDKFlask:
 
     def init_app(self, app) -> None:
         app.before_request(self._before_request)
+        app.after_request(self._after_request)
         app.register_error_handler(ProblemDetailError, self._handle_problem_detail)
 
     def _before_request(self) -> Any:
+        # Request ID propagation
+        incoming_id = request.headers.get("X-Request-ID", "")
+        request_id = incoming_id or str(uuid.uuid4())
+        g.coresdk_rid_token = _current_request_id.set(request_id)
+        g.coresdk_request_id = request_id
+
         if request.path in ("/healthz", "/readyz"):
             return None
 
@@ -120,6 +130,22 @@ class CoreSDKFlask:
                     g.claims = decision.claims
                     if span and _StatusCode:  # type: ignore[truthy-function]
                         span.set_status(_StatusCode.OK)
+
+                # Trial state injection
+                try:
+                    trial_info = self.sdk.check_entitlement("__trial__")
+                    if trial_info.expires_at > 0:
+                        import time
+
+                        days = max(0, int((trial_info.expires_at - time.time()) / 86400))
+                        g.coresdk_trial = TrialState(
+                            is_trial=True,
+                            trial_ends_at=trial_info.expires_at,
+                            days_remaining=days,
+                        )
+                except Exception:  # noqa: S110
+                    pass  # no license configured or trial not applicable
+
             except ProblemDetailError as exc:
                 if span:
                     span.record_exception(exc)
@@ -134,6 +160,16 @@ class CoreSDKFlask:
                 g.claims = None
 
         return None
+
+    def _after_request(self, response: Response) -> Response:
+        # Request ID propagation
+        request_id = getattr(g, "coresdk_request_id", "")
+        if request_id:
+            response.headers["X-Request-ID"] = request_id
+        rid_token = getattr(g, "coresdk_rid_token", None)
+        if rid_token is not None:
+            _current_request_id.reset(rid_token)
+        return response
 
     def _handle_problem_detail(self, error: ProblemDetailError) -> Any:
         return _problem_response(error.to_dict(), error.status)

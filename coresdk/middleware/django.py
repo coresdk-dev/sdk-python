@@ -4,8 +4,11 @@ from __future__ import annotations
 
 import contextlib
 import logging
+import uuid
 from collections.abc import Callable
 
+from coresdk._context import _current_request_id
+from coresdk._types import TrialState
 from coresdk.errors._rfc9457 import ProblemDetailError
 
 logger = logging.getLogger(__name__)
@@ -74,8 +77,17 @@ class CoreSDKMiddleware:
             pass  # OTel not installed
 
     def __call__(self, request: HttpRequest) -> HttpResponse:
+        # Request ID propagation
+        incoming_id = request.headers.get("X-Request-ID", "")
+        request_id = incoming_id or str(uuid.uuid4())
+        rid_token = _current_request_id.set(request_id)
+        request.coresdk_request_id = request_id  # type: ignore[attr-defined]
+
         if request.path in self.EXEMPT_PATHS or request.path.startswith("/admin/"):
-            return self.get_response(request)
+            response = self.get_response(request)
+            response["X-Request-ID"] = request_id
+            _current_request_id.reset(rid_token)
+            return response
 
         auth_header = request.headers.get("Authorization", "")
         token = ""
@@ -83,7 +95,7 @@ class CoreSDKMiddleware:
             token = auth_header[7:].strip()
 
         if not token:
-            return JsonResponse(
+            response = JsonResponse(
                 {
                     "type": "https://coresdk.io/errors/unauthorized",
                     "title": "Unauthorized",
@@ -93,6 +105,9 @@ class CoreSDKMiddleware:
                 status=401,
                 content_type="application/problem+json",
             )
+            response["X-Request-ID"] = request_id
+            _current_request_id.reset(rid_token)
+            return response
 
         with _span_ctx("coresdk.auth") as span:
             try:
@@ -114,16 +129,35 @@ class CoreSDKMiddleware:
                         span.set_attribute("coresdk.tenant_id", tenant_id)
                 if span and _StatusCode:  # type: ignore[truthy-function]
                     span.set_status(_StatusCode.OK)
+
+                # Trial state injection
+                try:
+                    trial_info = self.sdk.check_entitlement("__trial__")
+                    if trial_info.expires_at > 0:
+                        import time
+
+                        days = max(0, int((trial_info.expires_at - time.time()) / 86400))
+                        request.coresdk_trial = TrialState(  # type: ignore[attr-defined]
+                            is_trial=True,
+                            trial_ends_at=trial_info.expires_at,
+                            days_remaining=days,
+                        )
+                except Exception:  # noqa: S110
+                    pass  # no license configured or trial not applicable
+
             except ProblemDetailError as exc:
                 if span:
                     span.record_exception(exc)
                     if _StatusCode:  # type: ignore[truthy-function]
                         span.set_status(_StatusCode.ERROR)
-                return JsonResponse(
+                response = JsonResponse(
                     exc.to_dict(),
                     status=exc.status,
                     content_type="application/problem+json",
                 )
+                response["X-Request-ID"] = request_id
+                _current_request_id.reset(rid_token)
+                return response
             except Exception as exc:
                 if span:
                     span.record_exception(exc)
@@ -133,7 +167,7 @@ class CoreSDKMiddleware:
                     "CoreSDK auth error (fail-open): %s", type(exc).__name__, exc_info=True
                 )
                 if self.fail_mode != "open":
-                    return JsonResponse(
+                    response = JsonResponse(
                         {
                             "type": "https://errors.coresdk.io/internal-error",
                             "title": "Internal Server Error",
@@ -143,6 +177,12 @@ class CoreSDKMiddleware:
                         status=500,
                         content_type="application/problem+json",
                     )
+                    response["X-Request-ID"] = request_id
+                    _current_request_id.reset(rid_token)
+                    return response
                 request.coresdk_claims = None  # type: ignore[attr-defined]
 
-        return self.get_response(request)
+        response = self.get_response(request)
+        response["X-Request-ID"] = request_id
+        _current_request_id.reset(rid_token)
+        return response

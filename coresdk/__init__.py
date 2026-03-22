@@ -1,11 +1,11 @@
 """CoreSDK — auth, policy, observability. One import."""
 
-import contextvars
 from contextlib import contextmanager
 
 from coresdk._async_sdk import AsyncSDK
 from coresdk._client import CoreSDKClient
 from coresdk._config import SDKConfig
+from coresdk._context import _current_request_id, _current_tenant, _current_user
 from coresdk._types import (
     AuditRecord,
     AuthDecision,
@@ -35,15 +35,16 @@ __all__ = [
     "SamlDecision",
     "get_current_tenant",
     "get_current_user",
+    "get_request_id",
     "require_auth",
     "trace",
 ]
 __version__ = "0.2.0"
 
-_current_tenant: contextvars.ContextVar[str] = contextvars.ContextVar(
-    "coresdk_tenant_id", default=""
-)
-_current_user: contextvars.ContextVar[str] = contextvars.ContextVar("coresdk_user_id", default="")
+
+def get_request_id() -> str:
+    """Return the request ID for the current context (set by middleware)."""
+    return _current_request_id.get()
 
 
 def get_current_tenant() -> str:

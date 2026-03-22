@@ -77,10 +77,11 @@ class CircuitBreaker:
             logger.info("CircuitBreaker[%s]: %s -> CLOSED (success)", self.name, previous.value)
 
     def record_failure(self) -> None:
-        """Record a failed call — increment counter and open the circuit when threshold is reached."""
+        """Record a failed call — open the circuit when threshold is reached."""
         with self._lock:
             self._failure_count += 1
-            if self._failure_count >= self.failure_threshold and self._state is not CircuitState.OPEN:
+            threshold_hit = self._failure_count >= self.failure_threshold
+            if threshold_hit and self._state is not CircuitState.OPEN:
                 self._state = CircuitState.OPEN
                 self._opened_at = time.monotonic()
                 logger.warning(
@@ -133,10 +134,10 @@ class CircuitBreakerRegistry:
         """
         with self._lock:
             if name not in self._breakers:
+                ft = kwargs.get("failure_threshold", self._default_failure_threshold)
+                rt = kwargs.get("recovery_timeout_s", self._default_recovery_timeout_s)
                 self._breakers[name] = CircuitBreaker(
-                    name=name,
-                    failure_threshold=kwargs.get("failure_threshold", self._default_failure_threshold),
-                    recovery_timeout_s=kwargs.get("recovery_timeout_s", self._default_recovery_timeout_s),
+                    name=name, failure_threshold=ft, recovery_timeout_s=rt,
                 )
             return self._breakers[name]
 

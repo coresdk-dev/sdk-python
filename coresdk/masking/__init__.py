@@ -20,14 +20,14 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from coresdk.tracing.processor import (
-    BLOCKED_FIELDS,
-    REDACTED,
     _APIKEY_RE,
     _BEARER_RE,
     _CC_RE,
     _EMAIL_RE,
     _JWT_RE,
     _SSN_RE,
+    BLOCKED_FIELDS,
+    REDACTED,
 )
 
 __all__ = [
@@ -185,7 +185,7 @@ def _engine(config: MaskingConfig | None) -> MaskingEngine:
     """Return a :class:`MaskingEngine`, caching the default instance."""
     if config is not None:
         return MaskingEngine(config)
-    global _DEFAULT_ENGINE  # noqa: PLW0603
+    global _DEFAULT_ENGINE
     if _DEFAULT_ENGINE is None:
         _DEFAULT_ENGINE = MaskingEngine()
     return _DEFAULT_ENGINE

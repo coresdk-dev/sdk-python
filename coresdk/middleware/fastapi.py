@@ -116,12 +116,17 @@ try:
                 request.state.coresdk_user = claims
 
                 # Fallback on sidecar error
-                if not decision.allowed and self.fallback_validator and self.fallback_on_sidecar_error:
-                    if decision.reason == "fail-open":
-                        fallback_result = self.fallback_validator(token)
-                        if fallback_result:
-                            request.state.coresdk_user = fallback_result
-                            return await call_next(request)
+                can_fallback = (
+                    not decision.allowed
+                    and self.fallback_validator
+                    and self.fallback_on_sidecar_error
+                    and decision.reason == "fail-open"
+                )
+                if can_fallback:
+                    fallback_result = self.fallback_validator(token)
+                    if fallback_result:
+                        request.state.coresdk_user = fallback_result
+                        return await call_next(request)
 
                 if not decision.allowed and decision.reason != "fail-open":
                     return JSONResponse(

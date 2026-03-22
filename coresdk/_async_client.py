@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 import logging
 from pathlib import Path
-from typing import Any
 
 import grpc.aio
 
@@ -424,16 +423,20 @@ class AsyncCoreSDKClient:
         if channel is None:
             return self._fail_open_decision()
         try:
-            payload = _encode_string(2, action) + _encode_string(3, resource) + _encode_string(7, token)
-            response_bytes = await self._call("/coresdk.v1.AuthService/Authorize", payload)
+            payload = (
+                _encode_string(2, action)
+                + _encode_string(3, resource)
+                + _encode_string(7, token)
+            )
+            response_bytes = await self._call(
+                "/coresdk.v1.AuthService/Authorize", payload
+            )
             fields = _decode_fields(response_bytes)
             allowed = _field_bool(fields, 1)
             reason = _field_str(fields, 2)
-            return AuthDecision(
-                allowed=allowed,
-                claims=Claims(sub="", tenant_id=tenant_id or self.config.tenant_id, roles=[], exp=0) if allowed else None,
-                reason=reason,
-            )
+            tid = tenant_id or self.config.tenant_id
+            claims = Claims(sub="", tenant_id=tid, roles=[], exp=0) if allowed else None
+            return AuthDecision(allowed=allowed, claims=claims, reason=reason)
         except grpc.RpcError as e:
             if self.config.fail_mode == "open":
                 logger.warning("Authorize RPC failed, failing open: %s", e)
@@ -520,8 +523,13 @@ class AsyncCoreSDKClient:
     ) -> bool:
         """Validate cross-tenant isolation (async)."""
         try:
-            payload = _encode_string(1, requesting_tenant_id) + _encode_string(2, resource_tenant_id)
-            response_bytes = await self._call("/coresdk.v1.TenantService/ValidateIsolation", payload)
+            payload = (
+                _encode_string(1, requesting_tenant_id)
+                + _encode_string(2, resource_tenant_id)
+            )
+            response_bytes = await self._call(
+                "/coresdk.v1.TenantService/ValidateIsolation", payload,
+            )
             fields = _decode_fields(response_bytes)
             return _field_bool(fields, 1)
         except Exception as e:

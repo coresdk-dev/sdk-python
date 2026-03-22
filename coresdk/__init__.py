@@ -18,8 +18,8 @@ from coresdk.middleware.flask import CoreSDKFlask, require_auth
 from coresdk.tracing.decorator import trace
 
 __all__ = [
-    "AsyncSDK",
     "SDK",
+    "AsyncSDK",
     "AuditRecord",
     "AuthDecision",
     "Claims",

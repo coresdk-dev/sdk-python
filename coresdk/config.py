@@ -5,14 +5,13 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import AsyncIterator
-from typing import Any
 
 from coresdk._client import _decode_fields, _encode_string, _field_str
 
 logger = logging.getLogger(__name__)
 
 
-async def watch_config(sdk: Any) -> AsyncIterator[dict]:
+async def watch_config(sdk: object) -> AsyncIterator[dict]:
     """Async generator yielding config snapshots as dicts.
 
     Usage::

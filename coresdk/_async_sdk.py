@@ -31,7 +31,7 @@ class AsyncSDK:
         self._client = AsyncCoreSDKClient(config)
 
     @classmethod
-    def from_env(cls) -> "AsyncSDK":
+    def from_env(cls) -> AsyncSDK:
         """Initialize from environment variables."""
         return cls(SDKConfig.from_env())
 

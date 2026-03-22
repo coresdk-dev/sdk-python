@@ -735,7 +735,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(b"")
+            response_bytes = stub(b"", metadata=self._metadata)
             # GetJwksResponse: jwks_json(1)
             fields = _decode_fields(response_bytes)
             return _field_str(fields, 1) or '{"keys":[]}'
@@ -798,7 +798,7 @@ class CoreSDKClient:
                 request_serializer=lambda x: x,
                 response_deserializer=lambda x: x,
             )
-            response_bytes = stub(b"")
+            response_bytes = stub(b"", metadata=self._metadata)
             # GetConfigResponse wraps ConfigSnapshot at tag 1
             # ConfigSnapshot: version(1), values map(2), updated_at(3)
             fields = _decode_fields(response_bytes)

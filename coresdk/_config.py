@@ -37,6 +37,7 @@ class SDKConfig:
     tls_ca: str = ""
     inject_headers: bool = True
     exclude_paths: list[str] = None  # type: ignore[assignment]
+    service_token: str = ""
     api_key_prefix: str = ""
     custom_prompt_patterns: list[tuple[str, str, str]] = field(default_factory=list)
 
@@ -76,6 +77,7 @@ class SDKConfig:
                 "CORESDK_INJECT_TENANT_HEADERS", "true"
             ).lower()
             in ("true", "1", "yes"),
+            service_token=os.environ.get("CORESDK_SERVICE_TOKEN", ""),
             exclude_paths=_parse_exclude_paths(),
             api_key_prefix=os.environ.get("CORESDK_API_KEY_PREFIX", ""),
             custom_prompt_patterns=_parse_custom_prompt_patterns(),

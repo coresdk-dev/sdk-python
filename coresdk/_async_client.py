@@ -37,6 +37,11 @@ class AsyncCoreSDKClient:
     def __init__(self, config: SDKConfig) -> None:
         self.config = config
         self._channel: grpc.aio.Channel | None = None
+        self._metadata: list[tuple[str, str]] = [
+            ("x-service-name", config.service_name),
+        ]
+        if config.service_token:
+            self._metadata.append(("x-service-token", config.service_token))
 
     async def _get_channel(self) -> grpc.aio.Channel | None:
         if self._channel is None:
@@ -87,7 +92,7 @@ class AsyncCoreSDKClient:
             request_serializer=lambda x: x,
             response_deserializer=lambda x: x,
         )
-        result: bytes = await stub(payload)
+        result: bytes = await stub(payload, metadata=self._metadata)
         return result
 
     # -----------------------------------------------------------------

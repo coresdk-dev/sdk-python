@@ -44,6 +44,9 @@ sdk = SDK.from_env()  # reads CORESDK_SIDECAR_ADDR, CORESDK_TENANT_ID, etc.
 decision = sdk.authorize("eyJ...")
 if decision.allowed:
     print(f"Hello, {decision.claims.sub}")
+    print(f"Email: {decision.claims.email}")    # first-class field
+    print(f"Scopes: {decision.claims.scopes}")  # first-class field
+# decision.claims is always non-None — safe to access without checking decision.allowed first
 ```
 
 The sidecar must be running on `localhost:50051` (default). See [Sidecar](#sidecar) below.
@@ -59,7 +62,8 @@ Validate a JWT and optionally check action/resource authorization.
 ```python
 decision = sdk.authorize("eyJ...", action="read", resource="/orders")
 # decision.allowed: bool
-# decision.claims.sub, .tenant_id, .roles, .exp
+# decision.claims.sub, .tenant_id, .roles, .exp, .email, .scopes
+# decision.claims is always non-None (Claims.empty() on denial)
 # decision.reason: str (populated on denial)
 ```
 
@@ -380,7 +384,14 @@ async def handler(claims=Depends(require_auth(sdk))):
     return {"sub": claims.sub}
 ```
 
-Claims are available via `request.state.coresdk_user`. The middleware sets the `X-Request-ID` header and populates the request-ID context var.
+Claims are available via `request.state.coresdk_user`. The middleware sets the `X-Request-ID` header, injects `X-Tenant-ID`/`X-User-UUID` for downstream services, and populates the request-ID context var.
+
+Disable downstream header injection:
+
+```python
+app.add_middleware(CoreSDKMiddleware, sdk=sdk, inject_headers=False)
+# or: CORESDK_INJECT_TENANT_HEADERS=false
+```
 
 Shadow mode (safe migration rollout — run CoreSDK in parallel without enforcing):
 
@@ -475,6 +486,57 @@ state = registry.get_state("payments-service")  # CircuitState.CLOSED / OPEN / H
 
 ---
 
+## SDKConfig
+
+`SDKConfig` can be constructed programmatically or loaded from environment variables via `SDK.from_env()`.
+
+### `api_key_prefix`
+
+Auto-register a token prefix in the masking engine so API keys starting with that prefix are redacted without manual `MaskingConfig`:
+
+```python
+sdk = SDK(SDKConfig(api_key_prefix="cpod_"))
+safe = sdk.mask_dict({"key": "cpod_AbCd1234EfGh5678IjKl"})
+# {"key": "[REDACTED]"}
+```
+
+Also reads `CORESDK_API_KEY_PREFIX` env var.
+
+### `custom_prompt_patterns`
+
+Extend `check_prompt()` with domain-specific injection patterns at SDK init time:
+
+```python
+sdk = SDK(SDKConfig(
+    custom_prompt_patterns=[
+        (r"<MCP:tool>", "tool_injection", "high"),
+        (r"BEGIN TRUSTED CONTEXT", "context_injection", "medium"),
+    ]
+))
+result = sdk.check_prompt([{"role": "user", "content": "<MCP:tool>..."}])
+# result["safe"]: False
+```
+
+Also reads `CORESDK_CUSTOM_PROMPT_PATTERNS` as a JSON array:
+
+```bash
+CORESDK_CUSTOM_PROMPT_PATTERNS='[["<MCP:tool>", "tool_injection", "high"]]'
+```
+
+### `inject_headers`
+
+Control whether `CoreSDKMiddleware` injects `X-Tenant-ID` and `X-User-UUID` headers for downstream services:
+
+```python
+# Disable header injection via constructor
+app.add_middleware(CoreSDKMiddleware, sdk=sdk, inject_headers=False)
+
+# Or via env var (middleware reads from sdk.config.inject_headers by default)
+# CORESDK_INJECT_TENANT_HEADERS=false
+```
+
+---
+
 ## Configuration Reference
 
 | Variable | Default | Description |
@@ -485,6 +547,9 @@ state = registry.get_state("payments-service")  # CircuitState.CLOSED / OPEN / H
 | `CORESDK_FAIL_MODE` | `open` | `open` (allow on error) or `closed` (deny on error) |
 | `CORESDK_ENV` | `production` | Set to `development` for insecure channel + verbose logging |
 | `CORESDK_LOG_LEVEL` | `WARNING` | Python logging level |
+| `CORESDK_INJECT_TENANT_HEADERS` | `true` | Inject `X-Tenant-ID`/`X-User-UUID` headers for downstream services |
+| `CORESDK_API_KEY_PREFIX` | — | Auto-register prefix (e.g. `cpod_`) in the masking engine |
+| `CORESDK_CUSTOM_PROMPT_PATTERNS` | — | JSON array of `[pattern, category, severity]` triples added to `check_prompt()` |
 | `CORESDK_CB_FAILURE_THRESHOLD` | `5` | Default circuit breaker failure threshold |
 | `CORESDK_CB_RECOVERY_TIMEOUT_S` | `30.0` | Default circuit breaker recovery timeout |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | — | OTLP trace exporter endpoint |

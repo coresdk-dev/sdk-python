@@ -150,18 +150,20 @@ class CoreSDKClient:
     def validate_token(
         self, token: str, *, action: str = "", resource: str = "", tenant_id: str = ""
     ) -> AuthDecision:
+        effective_tenant = tenant_id or self.config.tenant_id
         channel = self._get_channel()
         if channel is None:
             return AuthDecision(
                 allowed=True,
-                claims=Claims(sub="unknown", tenant_id=self.config.tenant_id, roles=[], exp=0),
+                claims=Claims(sub="unknown", tenant_id=effective_tenant, roles=[], exp=0),
                 reason="fail-open",
+                tenant_id=effective_tenant,
             )
         try:
             # ValidateTokenRequest: token(1), tenant_id(2), resource(3), action(4)
             payload = (
                 _encode_string(1, token)
-                + _encode_string(2, tenant_id or self.config.tenant_id)
+                + _encode_string(2, effective_tenant)
                 + _encode_string(3, resource)
                 + _encode_string(4, action)
             )
@@ -176,23 +178,27 @@ class CoreSDKClient:
             fields = _decode_fields(response_bytes)
             allowed = _field_bool(fields, 1)
             subject = _field_str(fields, 2)
-            tenant = _field_str(fields, 3) or self.config.tenant_id
+            tenant = _field_str(fields, 3) or effective_tenant
             reason = _field_str(fields, 5)
             # roles is repeated string at field 4
             roles = [r.decode("utf-8") if isinstance(r, bytes) else r for r in fields.get(4, [])]
 
             return AuthDecision(
                 allowed=allowed,
-                claims=Claims(sub=subject, tenant_id=tenant, roles=roles, exp=0),
+                claims=Claims(sub=subject, tenant_id=tenant, roles=roles, exp=0)
+                if allowed
+                else None,
                 reason=reason,
+                tenant_id=tenant,
             )
         except grpc.RpcError as e:
             if self.config.fail_mode == "open":
                 logger.warning("Auth RPC failed, failing open: %s", e)
                 return AuthDecision(
                     allowed=True,
-                    claims=Claims(sub="unknown", tenant_id=self.config.tenant_id, roles=[], exp=0),
+                    claims=Claims(sub="unknown", tenant_id=effective_tenant, roles=[], exp=0),
                     reason="fail-open",
+                    tenant_id=effective_tenant,
                 )
             raise ProblemDetailError(
                 title="Unauthorized",
@@ -206,8 +212,9 @@ class CoreSDKClient:
             logger.warning("Auth unexpected error, failing open: %s", exc)
             return AuthDecision(
                 allowed=True,
-                claims=Claims(sub="unknown", tenant_id=self.config.tenant_id, roles=[], exp=0),
+                claims=Claims(sub="unknown", tenant_id=effective_tenant, roles=[], exp=0),
                 reason="fail-open",
+                tenant_id=effective_tenant,
             )
 
     def evaluate_policy(self, rule: str, input_data: dict) -> bool:
@@ -622,12 +629,14 @@ class CoreSDKClient:
         tenant_id: str = "",
     ) -> AuthDecision:
         """Combined auth+authz via AuthService/Authorize."""
+        effective_tenant = tenant_id or self.config.tenant_id
         channel = self._get_channel()
         if channel is None:
             return AuthDecision(
                 allowed=True,
-                claims=Claims(sub="unknown", tenant_id=self.config.tenant_id, roles=[], exp=0),
+                claims=Claims(sub="unknown", tenant_id=effective_tenant, roles=[], exp=0),
                 reason="fail-open",
+                tenant_id=effective_tenant,
             )
         try:
             # AuthorizeRequest: subject(1), action(2), resource(3), token(7)
@@ -646,18 +655,20 @@ class CoreSDKClient:
             reason = _field_str(fields, 2)
             return AuthDecision(
                 allowed=allowed,
-                claims=Claims(sub="", tenant_id=tenant_id or self.config.tenant_id, roles=[], exp=0)
+                claims=Claims(sub="", tenant_id=effective_tenant, roles=[], exp=0)
                 if allowed
                 else None,
                 reason=reason,
+                tenant_id=effective_tenant,
             )
         except grpc.RpcError as e:
             if self.config.fail_mode == "open":
                 logger.warning("Authorize RPC failed, failing open: %s", e)
                 return AuthDecision(
                     allowed=True,
-                    claims=Claims(sub="unknown", tenant_id=self.config.tenant_id, roles=[], exp=0),
+                    claims=Claims(sub="unknown", tenant_id=effective_tenant, roles=[], exp=0),
                     reason="fail-open",
+                    tenant_id=effective_tenant,
                 )
             raise ProblemDetailError(
                 title="Forbidden",

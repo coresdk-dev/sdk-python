@@ -24,6 +24,7 @@ class AuthDecision:
     allowed: bool
     claims: Claims | None = None
     reason: str = ""
+    tenant_id: str = ""
 
 
 @dataclass

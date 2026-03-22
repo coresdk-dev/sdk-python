@@ -3,6 +3,15 @@
 import os
 from dataclasses import dataclass
 
+_DEFAULT_EXCLUDE_PATHS = ["/healthz", "/readyz", "/metrics"]
+
+
+def _parse_exclude_paths() -> list[str]:
+    raw = os.environ.get("CORESDK_EXCLUDE_PATHS", "")
+    if raw:
+        return [p.strip() for p in raw.split(",") if p.strip()]
+    return list(_DEFAULT_EXCLUDE_PATHS)
+
 
 @dataclass
 class SDKConfig:
@@ -16,6 +25,11 @@ class SDKConfig:
     tls_cert: str = ""
     tls_key: str = ""
     tls_ca: str = ""
+    exclude_paths: list[str] = None  # type: ignore[assignment]
+
+    def __post_init__(self) -> None:
+        if self.exclude_paths is None:
+            self.exclude_paths = list(_DEFAULT_EXCLUDE_PATHS)
 
     @classmethod
     def from_env(cls) -> "SDKConfig":
@@ -30,4 +44,5 @@ class SDKConfig:
             tls_cert=os.environ.get("CORESDK_TLS_CERT", ""),
             tls_key=os.environ.get("CORESDK_TLS_KEY", ""),
             tls_ca=os.environ.get("CORESDK_TLS_CA", ""),
+            exclude_paths=_parse_exclude_paths(),
         )

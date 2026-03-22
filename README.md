@@ -16,6 +16,24 @@ pip install "coresdk[flask]"         # + Flask middleware
 pip install "coresdk[dev,fastapi,flask]"  # development (tests, linting)
 ```
 
+### grpcio compatibility matrix
+
+`coresdk` requires `grpcio>=1.60.0,<2.0.0`. Tested versions per Python release:
+
+| Python | Minimum grpcio | Recommended | Notes |
+|--------|---------------|-------------|-------|
+| 3.9    | 1.60.0        | 1.68.x      | Fully supported |
+| 3.10   | 1.60.0        | 1.68.x      | Fully supported |
+| 3.11   | 1.60.0        | 1.68.x      | Fully supported |
+| 3.12   | 1.62.0        | 1.68.x      | grpcio <1.62 has build issues on 3.12 |
+| 3.13   | 1.68.0        | 1.68.x      | grpcio <1.68 does not build on 3.13 |
+
+If you encounter `grpcio` build or import errors, upgrade first:
+
+```bash
+pip install "grpcio>=1.68.0"
+```
+
 ## Quick Start
 
 ```python

@@ -68,11 +68,13 @@ class AsyncCoreSDKClient:
                 raise
         return self._channel
 
-    def _fail_open_decision(self) -> AuthDecision:
+    def _fail_open_decision(self, tenant_id: str = "") -> AuthDecision:
+        tid = tenant_id or self.config.tenant_id
         return AuthDecision(
             allowed=True,
-            claims=Claims(sub="unknown", tenant_id=self.config.tenant_id, roles=[], exp=0),
+            claims=Claims(sub="unknown", tenant_id=tid, roles=[], exp=0),
             reason="fail-open",
+            tenant_id=tid,
         )
 
     async def _call(self, path: str, payload: bytes) -> bytes:
@@ -95,13 +97,14 @@ class AsyncCoreSDKClient:
     async def validate_token(
         self, token: str, *, action: str = "", resource: str = "", tenant_id: str = ""
     ) -> AuthDecision:
+        effective_tenant = tenant_id or self.config.tenant_id
         channel = await self._get_channel()
         if channel is None:
-            return self._fail_open_decision()
+            return self._fail_open_decision(effective_tenant)
         try:
             payload = (
                 _encode_string(1, token)
-                + _encode_string(2, tenant_id or self.config.tenant_id)
+                + _encode_string(2, effective_tenant)
                 + _encode_string(3, resource)
                 + _encode_string(4, action)
             )
@@ -109,18 +112,21 @@ class AsyncCoreSDKClient:
             fields = _decode_fields(response_bytes)
             allowed = _field_bool(fields, 1)
             subject = _field_str(fields, 2)
-            tenant = _field_str(fields, 3) or self.config.tenant_id
+            tenant = _field_str(fields, 3) or effective_tenant
             reason = _field_str(fields, 5)
             roles = [r.decode("utf-8") if isinstance(r, bytes) else r for r in fields.get(4, [])]
             return AuthDecision(
                 allowed=allowed,
-                claims=Claims(sub=subject, tenant_id=tenant, roles=roles, exp=0),
+                claims=Claims(sub=subject, tenant_id=tenant, roles=roles, exp=0)
+                if allowed
+                else None,
                 reason=reason,
+                tenant_id=tenant,
             )
         except grpc.RpcError as e:
             if self.config.fail_mode == "open":
                 logger.warning("Auth RPC failed, failing open: %s", e)
-                return self._fail_open_decision()
+                return self._fail_open_decision(effective_tenant)
             raise ProblemDetailError(
                 title="Unauthorized",
                 status=401,
@@ -131,7 +137,7 @@ class AsyncCoreSDKClient:
             if self.config.fail_mode == "closed":
                 raise CoreSDKError(f"CoreSDK fail-closed: {exc}") from exc
             logger.warning("Auth unexpected error, failing open: %s", exc)
-            return self._fail_open_decision()
+            return self._fail_open_decision(effective_tenant)
 
     # -----------------------------------------------------------------
     # Policy
@@ -446,7 +452,7 @@ class AsyncCoreSDKClient:
             reason = _field_str(fields, 2)
             tid = tenant_id or self.config.tenant_id
             claims = Claims(sub="", tenant_id=tid, roles=[], exp=0) if allowed else None
-            return AuthDecision(allowed=allowed, claims=claims, reason=reason)
+            return AuthDecision(allowed=allowed, claims=claims, reason=reason, tenant_id=tid)
         except grpc.RpcError as e:
             if self.config.fail_mode == "open":
                 logger.warning("Authorize RPC failed, failing open: %s", e)

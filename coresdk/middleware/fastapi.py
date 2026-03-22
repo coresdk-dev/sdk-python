@@ -84,7 +84,12 @@ try:
         ):
             super().__init__(app)
             self.sdk = sdk
-            self.exclude_paths = exclude_paths or ["/healthz", "/readyz", "/metrics"]
+            if exclude_paths is not None:
+                self.exclude_paths = exclude_paths
+            elif hasattr(sdk, "config") and hasattr(sdk.config, "exclude_paths"):
+                self.exclude_paths = sdk.config.exclude_paths
+            else:
+                self.exclude_paths = ["/healthz", "/readyz", "/metrics"]
             self.fallback_validator = fallback_validator
             self.fallback_on_sidecar_error = fallback_on_sidecar_error
             self.shadow_mode = shadow_mode
@@ -165,7 +170,7 @@ try:
             debug_info = None
             try:
                 decision = self.sdk.authorize(token)
-                claims = decision.claims if hasattr(decision, "claims") else decision
+                claims = decision.claims
                 request.state.coresdk_user = claims
 
                 # Fallback on sidecar error
@@ -198,11 +203,7 @@ try:
                     resp.headers["X-Request-ID"] = request_id
                     _current_request_id.reset(rid_token)
                     return resp
-                request.state.coresdk_tenant = (
-                    claims.get("tenant_id", "")
-                    if isinstance(claims, dict)
-                    else getattr(claims, "tenant_id", "")
-                )
+                request.state.coresdk_tenant = getattr(claims, "tenant_id", "")
 
                 # Trial state injection
                 try:

@@ -129,6 +129,10 @@ class MockSDK:
     def validate_isolation(self, requesting_tenant_id: str, resource_tenant_id: str) -> bool:
         return requesting_tenant_id == resource_tenant_id
 
+    def check_prompt(self, messages: list[dict]) -> dict:
+        """Mock prompt injection check — always returns safe."""
+        return {"safe": True, "detections": [], "risk": "none"}
+
     def mask_dict_rpc(self, data: dict, **kwargs: Any) -> dict:  # noqa: ANN401
         return data
 

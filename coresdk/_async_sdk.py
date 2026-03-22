@@ -8,6 +8,7 @@ from pathlib import Path
 
 from coresdk._async_client import AsyncCoreSDKClient
 from coresdk._config import SDKConfig
+from coresdk._context import _current_tenant, _current_user
 from coresdk._types import (
     AuditRecord,
     AuthDecision,
@@ -167,6 +168,14 @@ class AsyncSDK:
         """Mask PII in a string via the sidecar (async)."""
         return await self._client.mask_string_rpc(value, extra_patterns)
 
+    async def health(self) -> bool:
+        """Check sidecar health (async)."""
+        return await self._client.health()
+
+    async def check_prompt(self, messages: list[dict]) -> dict:
+        """Check LLM messages for prompt injection via the sidecar (async)."""
+        return await self._client.check_prompt(messages)
+
     async def authorize_request(
         self,
         token: str,
@@ -213,8 +222,6 @@ class AsyncSDK:
             async with sdk.async_tenant_scope("ten_xxx", "usr_xxx"):
                 await sdk.emit_audit_event(action="login")  # auto-scoped
         """
-        from coresdk import _current_tenant, _current_user
-
         t_token = _current_tenant.set(tenant_id)
         u_token = _current_user.set(user_id)
         try:

@@ -152,6 +152,24 @@ class CoreSDKClient:
                 raise
         return self._channel
 
+    def health(self) -> bool:
+        """Check sidecar health via gRPC health check. Returns True if SERVING."""
+        channel = self._get_channel()
+        if channel is None:
+            return False
+        try:
+            payload = _encode_string(1, "")
+            stub = channel.unary_unary(
+                "/grpc.health.v1.Health/Check",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload, metadata=self._metadata, timeout=5)
+            fields = _decode_fields(response_bytes)
+            return _field_int(fields, 1) == 1
+        except Exception:
+            return False
+
     def validate_token(
         self, token: str, *, action: str = "", resource: str = "", tenant_id: str = ""
     ) -> AuthDecision:

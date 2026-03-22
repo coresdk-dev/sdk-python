@@ -1,4 +1,12 @@
-"""Resilience decorators — circuit breaker, retry with backoff, and timeout."""
+"""Resilience decorators — circuit breaker, retry with backoff, and timeout.
+
+Recommended stacking order (outermost first)::
+
+    @retry(max_attempts=3)
+    @circuit_breaker(failure_threshold=5)
+    @timeout(ms=3000)
+    async def call_service(): ...
+"""
 
 from __future__ import annotations
 
@@ -67,6 +75,18 @@ class CircuitBreaker:
                         elapsed,
                     )
             return self._state
+
+    @property
+    def failure_count(self) -> int:
+        """Current consecutive failure count."""
+        with self._lock:
+            return self._failure_count
+
+    @property
+    def opened_at(self) -> float:
+        """Monotonic timestamp when the circuit was last opened (0.0 if not open)."""
+        with self._lock:
+            return self._opened_at
 
     def record_success(self) -> None:
         """Record a successful call — reset to CLOSED."""

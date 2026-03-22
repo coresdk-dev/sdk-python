@@ -54,6 +54,25 @@ class ProblemDetailError(Exception):
     def forbidden(cls, detail: str) -> "ProblemDetailError":
         return cls("Forbidden", 403, detail=detail, type_uri="https://coresdk.io/errors/forbidden")
 
+    @classmethod
+    def not_found(cls, detail: str) -> "ProblemDetailError":
+        return cls("Not Found", 404, detail=detail, type_uri="https://coresdk.io/errors/not-found")
+
+    @classmethod
+    def bad_request(cls, detail: str) -> "ProblemDetailError":
+        return cls(
+            "Bad Request", 400, detail=detail, type_uri="https://coresdk.io/errors/bad-request"
+        )
+
+    def to_fastapi_response(self):
+        """Return a FastAPI JSONResponse.
+
+        Lazily imports FastAPI to avoid a hard dependency on the framework.
+        """
+        from fastapi.responses import JSONResponse
+
+        return JSONResponse(content=self.to_dict(), status_code=self.status)
+
     def __repr__(self) -> str:
         return f"ProblemDetailError(status={self.status}, title={self.title!r})"
 

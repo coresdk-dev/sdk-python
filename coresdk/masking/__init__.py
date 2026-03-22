@@ -57,6 +57,9 @@ class MaskingConfig:
         every other field is redacted.
     allowlist:
         Field names to keep when *allowlist_mode* is ``True``.
+    api_key_prefixes:
+        Additional API key prefixes (e.g. ``['sk-', 'pk-']``) whose values
+        are always redacted.
     """
 
     extra_blocked_fields: list[str] = field(default_factory=list)
@@ -64,6 +67,20 @@ class MaskingConfig:
     extra_literals: list[str] = field(default_factory=list)
     allowlist_mode: bool = False
     allowlist: set[str] = field(default_factory=set)
+    api_key_prefixes: list[str] = field(default_factory=list)
+
+
+def _luhn_check(digits: str) -> bool:
+    """Return ``True`` if *digits* passes the Luhn checksum."""
+    total = 0
+    for i, ch in enumerate(reversed(digits)):
+        n = int(ch)
+        if i % 2 == 1:
+            n *= 2
+            if n > 9:
+                n -= 9
+        total += n
+    return total % 10 == 0
 
 
 class MaskingEngine:
@@ -91,6 +108,8 @@ class MaskingEngine:
         ]
         for src in self._config.extra_patterns:
             self._patterns.append(re.compile(src))
+        for prefix in self._config.api_key_prefixes:
+            self._patterns.append(re.compile(re.escape(prefix) + r"[A-Za-z0-9_\-]{8,}"))
 
     # ------------------------------------------------------------------
     # Public API
@@ -100,6 +119,10 @@ class MaskingEngine:
         """Redact *value* if any PII pattern matches."""
         for pat in self._patterns:
             if pat.search(value):
+                if pat is _CC_RE:
+                    digits = re.sub(r"[^0-9]", "", value)
+                    if not _luhn_check(digits):
+                        continue
                 return REDACTED
         for lit in self._config.extra_literals:
             if lit in value:
@@ -138,7 +161,14 @@ class MaskingEngine:
     def _sub_patterns(self, text: str) -> str:
         """Substitute all pattern matches and literals inside *text*."""
         for pat in self._patterns:
-            text = pat.sub(REDACTED, text)
+            if pat is _CC_RE:
+                # Apply Luhn validation before redacting credit card matches.
+                def _cc_replacer(m: re.Match) -> str:
+                    digits = re.sub(r"[^0-9]", "", m.group())
+                    return REDACTED if _luhn_check(digits) else m.group()
+                text = pat.sub(_cc_replacer, text)
+            else:
+                text = pat.sub(REDACTED, text)
         for lit in self._config.extra_literals:
             text = text.replace(lit, REDACTED)
         return text

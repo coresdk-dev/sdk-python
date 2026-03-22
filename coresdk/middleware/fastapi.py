@@ -1,5 +1,6 @@
 """FastAPI middleware adapter — JWT auth + span creation + RFC 9457 errors."""
 
+import fnmatch
 import logging
 import os
 import uuid
@@ -9,6 +10,23 @@ from coresdk._context import _current_request_id
 from coresdk._types import Claims, TrialState
 
 logger = logging.getLogger(__name__)
+
+
+def _is_excluded(path: str, patterns: list[str]) -> bool:
+    """Check if *path* matches any exclude pattern (exact, prefix, or glob).
+
+    Supports:
+    - Exact match: ``"/healthz"``
+    - Glob patterns: ``"/api/v1/*"`` (uses :func:`fnmatch.fnmatch`)
+    - Prefix match: ``"/api/"`` matches ``"/api/users"``
+    """
+    for pattern in patterns:
+        if "*" in pattern:
+            if fnmatch.fnmatch(path, pattern):
+                return True
+        elif path == pattern or path.startswith(pattern.rstrip("/") + "/"):
+            return True
+    return False
 
 
 try:
@@ -101,6 +119,8 @@ try:
             else:
                 self.exclude_paths = ["/healthz", "/readyz", "/metrics"]
             self.fallback_validator = fallback_validator
+            # fallback_on_sidecar_error=True: returns 200 with empty claims instead of
+            # propagating the error — use in shadow/canary mode only
             self.fallback_on_sidecar_error = fallback_on_sidecar_error
             self.shadow_mode = shadow_mode
             if debug_headers is None:
@@ -127,7 +147,7 @@ try:
                 pass  # OTel not installed
 
         async def dispatch(self, request: Request, call_next):
-            if request.url.path in self.exclude_paths:
+            if _is_excluded(request.url.path, self.exclude_paths):
                 return await call_next(request)
 
             # Request ID propagation

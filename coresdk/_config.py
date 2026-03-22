@@ -18,7 +18,12 @@ def _parse_custom_prompt_patterns() -> list[tuple[str, str, str]]:
     raw = os.environ.get("CORESDK_CUSTOM_PROMPT_PATTERNS", "")
     if not raw:
         return []
-    parsed = json.loads(raw)
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise ValueError(
+            f"CORESDK_CUSTOM_PROMPT_PATTERNS is not valid JSON: {exc}"
+        ) from exc
     return [(str(p[0]), str(p[1]), str(p[2])) for p in parsed]
 
 
@@ -56,6 +61,18 @@ class SDKConfig:
             )
         if not self.sidecar_addr:
             raise ValueError("sidecar_addr must not be empty")
+        _valid_log_levels = {"DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"}
+        if self.log_level.upper() not in _valid_log_levels:
+            raise ValueError(
+                f"log_level must be one of {sorted(_valid_log_levels)}, got {self.log_level!r}"
+            )
+        if not self.service_name:
+            raise ValueError("service_name must not be empty")
+        tls_fields = [self.tls_cert, self.tls_key, self.tls_ca]
+        if any(tls_fields) and not all(tls_fields):
+            raise ValueError(
+                "tls_cert, tls_key, and tls_ca must all be set together or all be empty"
+            )
 
     @classmethod
     def from_env(cls) -> "SDKConfig":

@@ -114,15 +114,10 @@ try:
                         span.set_attribute(key, value)
 
         def on_end(self, span: ReadableSpan) -> None:
-            # Best-effort event masking — events may have immutable attributes
-            if hasattr(span, "_events") and span._events:
-                import contextlib
-
-                for event in span._events:
-                    if hasattr(event, "attributes") and event.attributes:
-                        masked = self._mask_attributes(dict(event.attributes))
-                        with contextlib.suppress(Exception):
-                            event._attributes = masked
+            # Span events are immutable after the span ends — masking must
+            # happen in on_start (before the span is recorded).  Attempting to
+            # mutate event._attributes here breaks across OTel SDK versions.
+            pass
 
         def shutdown(self) -> None:
             pass

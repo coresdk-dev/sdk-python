@@ -6,11 +6,11 @@ regex patterns from :mod:`coresdk.tracing.processor`.
 
 Quick start::
 
-    from coresdk.masking import mask_dict, mask_string, mask_llm_content
+    from coresdk.masking import mask_dict, mask_string
 
     safe = mask_dict({"email": "alice@example.com", "name": "Alice"})
     safe_text = mask_string("Contact alice@example.com for details")
-    safe_prompt = mask_llm_content("My SSN is 123-45-6789")
+    safe_ssn = mask_string("My SSN is 123-45-6789")
 """
 
 from __future__ import annotations

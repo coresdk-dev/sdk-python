@@ -13,12 +13,14 @@ from coresdk.errors._rfc9457 import ProblemDetailError
 logger = logging.getLogger(__name__)
 F = TypeVar("F", bound=Callable[..., Any])
 
-try:
-    from opentelemetry import trace as _otel_trace
+def _get_tracer() -> Any:  # noqa: ANN401
+    """Lazy tracer getter — fetched at call time, not import time."""
+    try:
+        from opentelemetry import trace as otel_trace
 
-    _tracer: Any = _otel_trace.get_tracer("coresdk")
-except ImportError:
-    _tracer = None
+        return otel_trace.get_tracer("coresdk")
+    except ImportError:
+        return None
 
 
 def coresdk_route(operation: str = "") -> Callable[[F], F]:
@@ -40,8 +42,9 @@ def coresdk_route(operation: str = "") -> Callable[[F], F]:
         @functools.wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
             span_name = operation or func.__name__
-            if _tracer is not None:
-                with _tracer.start_as_current_span(span_name) as span:
+            tracer = _get_tracer()
+            if tracer is not None:
+                with tracer.start_as_current_span(span_name) as span:
                     span.set_attribute("coresdk.operation", span_name)
                     try:
                         return await func(*args, **kwargs)
@@ -72,8 +75,9 @@ def coresdk_route(operation: str = "") -> Callable[[F], F]:
         @functools.wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
             span_name = operation or func.__name__
-            if _tracer is not None:
-                with _tracer.start_as_current_span(span_name) as span:
+            tracer = _get_tracer()
+            if tracer is not None:
+                with tracer.start_as_current_span(span_name) as span:
                     span.set_attribute("coresdk.operation", span_name)
                     try:
                         return func(*args, **kwargs)
@@ -125,8 +129,9 @@ def coresdk_service(operation: str = "") -> Callable[[F], F]:
         @functools.wraps(func)
         async def async_wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
             span_name = operation or func.__name__
-            if _tracer is not None:
-                with _tracer.start_as_current_span(span_name) as span:
+            tracer = _get_tracer()
+            if tracer is not None:
+                with tracer.start_as_current_span(span_name) as span:
                     span.set_attribute("coresdk.operation", span_name)
                     try:
                         return await func(*args, **kwargs)
@@ -205,8 +210,9 @@ def coresdk_service(operation: str = "") -> Callable[[F], F]:
         @functools.wraps(func)
         def sync_wrapper(*args: Any, **kwargs: Any) -> Any:  # noqa: ANN401
             span_name = operation or func.__name__
-            if _tracer is not None:
-                with _tracer.start_as_current_span(span_name) as span:
+            tracer = _get_tracer()
+            if tracer is not None:
+                with tracer.start_as_current_span(span_name) as span:
                     span.set_attribute("coresdk.operation", span_name)
                     try:
                         return func(*args, **kwargs)

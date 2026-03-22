@@ -1,8 +1,10 @@
 """CoreSDK — auth, policy, observability. One import."""
 
+import json
 import re
 from collections.abc import Iterator
 from contextlib import contextmanager
+from pathlib import Path
 
 from coresdk._async_sdk import AsyncSDK
 from coresdk._client import CoreSDKClient
@@ -19,6 +21,7 @@ from coresdk._types import (
     TrialState,
 )
 from coresdk.errors._rfc9457 import ProblemDetailError
+from coresdk.logging import coresdk_structlog_processor
 from coresdk.masking import MaskingConfig, MaskingEngine, mask_dict, mask_llm_content, mask_string
 from coresdk.middleware.django import CoreSDKMiddleware as DjangoMiddleware
 from coresdk.middleware.flask import CoreSDKFlask, require_auth
@@ -39,6 +42,7 @@ __all__ = [
     "RateLimitDecision",
     "SamlDecision",
     "TrialState",
+    "coresdk_structlog_processor",
     "get_current_tenant",
     "get_current_user",
     "get_request_id",
@@ -64,6 +68,35 @@ def get_current_tenant() -> str:
 def get_current_user() -> str:
     """Return the user ID set by the nearest enclosing tenant_scope()."""
     return _current_user.get()
+
+
+def _load_config_file(path: str | Path) -> SDKConfig:
+    """Load an SDKConfig from a TOML or JSON file."""
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"CoreSDK config file not found: {path}")
+
+    if p.suffix == ".toml":
+        try:
+            import tomllib
+        except ImportError:
+            try:
+                import tomli as tomllib  # type: ignore[no-redef]
+            except ImportError:
+                raise ImportError(
+                    "Install 'tomli' for TOML config support: pip install tomli"
+                ) from None
+        with p.open("rb") as f:
+            data = tomllib.load(f).get("coresdk", {})
+    elif p.suffix == ".json":
+        with p.open() as f:
+            data = json.load(f)
+    else:
+        raise ValueError(f"Unsupported config file format: {p.suffix} (use .toml or .json)")
+
+    config = SDKConfig(**{k: v for k, v in data.items() if k in SDKConfig.__dataclass_fields__})
+    config.validate()
+    return config
 
 
 _PROMPT_PATTERNS: list[tuple[str, str, str]] = [
@@ -124,6 +157,26 @@ class SDK:
                CORESDK_FAIL_MODE, CORESDK_SERVICE_NAME, CORESDK_LOG_LEVEL
         """
         config = SDKConfig.from_env()
+        return cls(config)
+
+    @classmethod
+    def from_config(cls, path: str | Path) -> "SDK":
+        """Load SDK configuration from a TOML or JSON file.
+
+        Supports TOML (requires tomllib/tomli) and JSON. TOML is preferred.
+        File format (TOML)::
+
+            [coresdk]
+            sidecar_addr = "localhost:50051"
+            tenant_id = "my-tenant"
+            fail_mode = "closed"
+            service_name = "my-service"
+
+        JSON equivalent::
+
+            {"sidecar_addr": "localhost:50051", "tenant_id": "my-tenant"}
+        """
+        config = _load_config_file(path)
         return cls(config)
 
     def authorize(

@@ -174,6 +174,15 @@ class CircuitBreakerRegistry:
         cb = self.get_or_create(name, **kwargs)
 
         def decorator(func: F) -> F:
+            import inspect
+
+            if not inspect.iscoroutinefunction(func):
+                raise TypeError(
+                    f"@circuit_breaker / registry.breaker() requires an async function, "
+                    f"got sync function {func.__qualname__!r}. "
+                    f"Wrap with `async def` or use a thread pool executor."
+                )
+
             @functools.wraps(func)
             async def wrapper(*args: Any, **kw: Any) -> Any:  # noqa: ANN401
                 current = cb.state
@@ -294,6 +303,15 @@ def circuit_breaker(
     """
 
     def decorator(func: F) -> F:
+        import inspect
+
+        if not inspect.iscoroutinefunction(func):
+            raise TypeError(
+                f"@circuit_breaker / registry.breaker() requires an async function, "
+                f"got sync function {func.__qualname__!r}. "
+                f"Wrap with `async def` or use a thread pool executor."
+            )
+
         cb = CircuitBreaker(
             name=f"_anon_{func.__module__}.{func.__qualname__}",
             failure_threshold=failure_threshold,

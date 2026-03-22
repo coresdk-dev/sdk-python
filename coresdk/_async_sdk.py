@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
+from pathlib import Path
 
 from coresdk._async_client import AsyncCoreSDKClient
 from coresdk._config import SDKConfig
@@ -37,6 +38,16 @@ class AsyncSDK:
     def from_env(cls) -> AsyncSDK:
         """Initialize from environment variables."""
         return cls(SDKConfig.from_env())
+
+    @classmethod
+    def from_config(cls, path: str | Path) -> AsyncSDK:
+        """Load SDK configuration from a TOML or JSON file.
+
+        See :meth:`SDK.from_config` for file format details.
+        """
+        from coresdk import _load_config_file
+
+        return cls(_load_config_file(path))
 
     async def authorize(self, token: str, *, action: str = "", resource: str = "") -> AuthDecision:
         """Validate a JWT and authorize the request (async)."""

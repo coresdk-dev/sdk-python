@@ -7,6 +7,8 @@
 
 Auth, policy enforcement, rate limiting, audit, feature flags, PII masking, and multi-tenancy for Python services — one import, backed by the CoreSDK sidecar over gRPC.
 
+**New here?** The [Getting Started guide](GETTING-STARTED.md) takes you from zero to a working sidecar + SDK call in 15 minutes, with a **why** explanation at every step.
+
 ## Installation
 
 ```bash
@@ -590,7 +592,10 @@ tar xf coresdk-sidecar-aarch64-apple-darwin.tar.gz
 Or via Docker:
 
 ```bash
-docker run -p 50051:50051 ghcr.io/coresdk-dev/sidecar:latest
+docker run \
+  -e CORESDK_SIDECAR_ADDR=[::]:50051 \
+  -p 50051:50051 -p 9091:9091 \
+  ghcr.io/coresdk-dev/sidecar:latest
 ```
 
 ---

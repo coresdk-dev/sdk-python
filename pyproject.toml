@@ -90,7 +90,7 @@ warn_unused_ignores = true
 # Gradually tighten — enable these as type coverage improves:
 # strict = true
 # disallow_any_generics = true
-exclude = ["tests/"]
+exclude = ["tests/", "coresdk/gen/"]
 
 # Middleware modules wrap untyped third-party libs (grpc, fastapi, flask, django)
 [[tool.mypy.overrides]]

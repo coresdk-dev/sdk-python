@@ -141,7 +141,7 @@ try:
                 provider = trace.get_tracer_provider()
                 if not isinstance(provider, TracerProvider):
                     return
-                provider.add_span_processor(PIIMaskingSpanProcessor())
+                provider.add_span_processor(PIIMaskingSpanProcessor())  # type: ignore[arg-type]
                 logger.debug("PIIMaskingSpanProcessor auto-wired")
             except ImportError:
                 pass  # OTel not installed

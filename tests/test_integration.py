@@ -35,7 +35,6 @@ def test_check_rate_limit_allowed(sdk):
     assert decision.remaining >= 0
 
 
-
 def test_emit_audit_event(sdk):
     record = sdk.emit_audit_event(
         action="integration.test",
@@ -59,6 +58,7 @@ def test_check_entitlement_unknown(sdk):
 def test_mask_string_local(sdk):
     """Masking is local — verify it works without sidecar round-trip."""
     from coresdk.masking import mask_string
+
     result = mask_string("email: alice@example.com")
     assert "alice@example.com" not in result
     assert "[REDACTED]" in result

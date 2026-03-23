@@ -229,7 +229,8 @@ class CoreSDKClient:
                     err_fields = _decode_fields(err_bytes)
                     reason = _field_str(err_fields, 3)
             extra = {
-                k: v for k, v in claims_map.items()
+                k: v
+                for k, v in claims_map.items()
                 if k not in {"tenant_id", "email", "scopes", "scope", "groups"}
             }
 

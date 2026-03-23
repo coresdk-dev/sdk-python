@@ -479,9 +479,7 @@ class AsyncCoreSDKClient:
             reason = _field_str(fields, 2)
             tid = tenant_id or self.config.tenant_id
             claims = (
-                Claims(sub="", tenant_id=tid, roles=[], exp=0)
-                if allowed
-                else Claims.empty(tid)
+                Claims(sub="", tenant_id=tid, roles=[], exp=0) if allowed else Claims.empty(tid)
             )
             return AuthDecision(allowed=allowed, claims=claims, reason=reason, tenant_id=tid)
         except grpc.RpcError as e:

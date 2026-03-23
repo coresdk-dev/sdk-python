@@ -166,6 +166,7 @@ class MaskingEngine:
                 def _cc_replacer(m: re.Match) -> str:
                     digits = re.sub(r"[^0-9]", "", m.group())
                     return REDACTED if _luhn_check(digits) else m.group()
+
                 text = pat.sub(_cc_replacer, text)
             else:
                 text = pat.sub(REDACTED, text)

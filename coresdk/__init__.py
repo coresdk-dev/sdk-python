@@ -100,7 +100,6 @@ def _load_config_file(path: str | Path) -> SDKConfig:
     return config
 
 
-
 class SDK:
     """Main CoreSDK entry point. Initialize with SDK.from_env()."""
 
@@ -382,8 +381,10 @@ class SDK:
         import re
 
         _injection_patterns = [
-            (r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|context)",
-             "high"),
+            (
+                r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|context)",
+                "high",
+            ),
             (r"reveal\s+(your\s+)?(system\s+)?prompt", "high"),
             (r"you\s+are\s+now\s+(?!an?\s+AI)", "medium"),
             (r"pretend\s+(you\s+are|to\s+be)", "medium"),

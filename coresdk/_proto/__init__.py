@@ -3,6 +3,7 @@
 Generated stubs (from buf) are preferred when available.
 Falls back to hand-written dataclass stubs if grpcio-tools is not installed.
 """
+
 from __future__ import annotations
 
 try:
@@ -11,11 +12,13 @@ try:
         auth_pb2,
         policy_pb2,
     )
+
     _GENERATED = True
 except ImportError:
     # Fallback: hand-written dataclass stubs (no buf/grpcio-tools needed)
     from coresdk._proto import auth_pb2 as auth_pb2  # type: ignore[no-redef]
     from coresdk._proto import policy_pb2 as policy_pb2  # type: ignore[no-redef]
+
     _GENERATED = False
 
 __all__ = ["_GENERATED", "auth_pb2", "policy_pb2"]

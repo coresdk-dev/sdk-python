@@ -75,9 +75,7 @@ class SDKConfig:
             tls_cert=os.environ.get("CORESDK_TLS_CERT", ""),
             tls_key=os.environ.get("CORESDK_TLS_KEY", ""),
             tls_ca=os.environ.get("CORESDK_TLS_CA", ""),
-            inject_headers=os.environ.get(
-                "CORESDK_INJECT_TENANT_HEADERS", "true"
-            ).lower()
+            inject_headers=os.environ.get("CORESDK_INJECT_TENANT_HEADERS", "true").lower()
             in ("true", "1", "yes"),
             service_token=os.environ.get("CORESDK_SERVICE_TOKEN", ""),
             exclude_paths=_parse_exclude_paths(),

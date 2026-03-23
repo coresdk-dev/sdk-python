@@ -13,6 +13,7 @@ from coresdk.errors._rfc9457 import ProblemDetailError
 logger = logging.getLogger(__name__)
 F = TypeVar("F", bound=Callable[..., Any])
 
+
 def _get_tracer() -> Any:  # noqa: ANN401
     """Lazy tracer getter — fetched at call time, not import time."""
     try:

@@ -47,7 +47,8 @@ class Claims:
             email=str(d.get("email", "")),
             scopes=list(d.get("scopes", [])),
             extra={
-                k: v for k, v in d.items()
+                k: v
+                for k, v in d.items()
                 if k not in {"sub", "tenant_id", "roles", "exp", "email", "scopes"}
             },
         )

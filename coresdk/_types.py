@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Any
 
 
@@ -24,12 +24,12 @@ class Claims:
     @property
     def exp_at(self) -> datetime:
         """Expiry as a timezone-aware datetime."""
-        return datetime.fromtimestamp(self.exp, tz=UTC)
+        return datetime.fromtimestamp(self.exp, tz=timezone.utc)
 
     @property
     def is_expired(self) -> bool:
         """True if the token has expired."""
-        return self.exp > 0 and datetime.now(UTC) > self.exp_at
+        return self.exp > 0 and datetime.now(timezone.utc) > self.exp_at
 
     @classmethod
     def empty(cls, tenant_id: str = "") -> Claims:
@@ -85,7 +85,7 @@ class AuditRecord:
     previous_hash: str = ""
     action: str = ""
     tenant_id: str = ""
-    timestamp: datetime = field(default_factory=lambda: datetime.now(UTC))
+    timestamp: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 @dataclass

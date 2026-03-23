@@ -69,12 +69,16 @@ decision = sdk.authorize("eyJ...", action="read", resource="/orders")
 # decision.reason: str (populated on denial)
 ```
 
-### `authorize_sync(token, *, action="", resource="") -> AuthDecision`
+### `authorize_sync(token, *, action="", resource="") -> AuthDecision` *(deprecated)*
 
-Synchronous alias for `authorize()`. Useful when an explicitly sync call site is required.
+**Deprecated.** Use `authorize()` directly. The SDK is synchronous by default; `authorize_sync()` is a no-op alias that adds cognitive load with no benefit. It will emit a `DeprecationWarning` and will be removed in a future version.
 
 ```python
+# Before (deprecated)
 decision = sdk.authorize_sync("eyJ...")
+
+# After
+decision = sdk.authorize("eyJ...")
 ```
 
 ### `authorize_request(token, action="", resource="", *, tenant_id="") -> AuthDecision`
@@ -274,16 +278,30 @@ safe = mask_dict(data, config=config)
 
 These delegate to the sidecar's `MaskingService`, which applies server-side rules.
 
-#### `mask_dict_rpc(data, extra_blocked_fields=None, extra_patterns=None) -> dict`
+#### `mask_dict_remote(data, extra_blocked_fields=None, extra_patterns=None) -> dict`
 
 ```python
-safe = sdk.mask_dict_rpc({"email": "alice@example.com"})
+safe = sdk.mask_dict_remote({"email": "alice@example.com"})
 ```
 
-#### `mask_string_rpc(value, extra_patterns=None) -> str`
+#### `mask_string_remote(value, extra_patterns=None) -> str`
 
 ```python
+safe = sdk.mask_string_remote("SSN: 123-45-6789")
+```
+
+#### `mask_dict_rpc(...)` and `mask_string_rpc(...)` *(deprecated)*
+
+**Deprecated.** The `_rpc` suffix leaked a transport implementation detail. Use `mask_dict_remote()` and `mask_string_remote()` instead. These methods emit a `DeprecationWarning` and will be removed in a future version.
+
+```python
+# Before (deprecated)
+safe = sdk.mask_dict_rpc({"email": "alice@example.com"})
 safe = sdk.mask_string_rpc("SSN: 123-45-6789")
+
+# After
+safe = sdk.mask_dict_remote({"email": "alice@example.com"})
+safe = sdk.mask_string_remote("SSN: 123-45-6789")
 ```
 
 ---

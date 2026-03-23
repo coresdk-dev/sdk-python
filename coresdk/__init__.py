@@ -2,6 +2,7 @@
 
 import json
 import re
+import warnings
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -157,7 +158,13 @@ class SDK:
     def authorize_sync(
         self, token: str, *, action: str = "", resource: str = "", tenant_id: str = ""
     ) -> AuthDecision:
-        """Synchronous authorize — same as authorize() since the SDK is currently sync."""
+        """Deprecated: use authorize() directly — the SDK is synchronous by default."""
+        warnings.warn(
+            "authorize_sync() is deprecated and will be removed in a future version. "
+            "Use authorize() directly — the SDK is already synchronous.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.authorize(token, action=action, resource=resource, tenant_id=tenant_id)
 
     def evaluate_policy(self, rule: str, input_data: dict) -> bool:
@@ -283,14 +290,41 @@ class SDK:
         """Validate cross-tenant isolation."""
         return self._client.validate_isolation(requesting_tenant_id, resource_tenant_id)
 
+    def mask_dict_remote(
+        self,
+        data: dict,
+        extra_blocked_fields: list[str] | None = None,
+        extra_patterns: list[str] | None = None,
+    ) -> dict:
+        """Mask PII in a dict using the sidecar's MaskingService (remote, via gRPC)."""
+        return self._client.mask_dict_rpc(
+            data,
+            extra_blocked_fields=extra_blocked_fields,
+            extra_patterns=extra_patterns,
+        )
+
+    def mask_string_remote(
+        self,
+        value: str,
+        extra_patterns: list[str] | None = None,
+    ) -> str:
+        """Mask PII in a string using the sidecar's MaskingService (remote, via gRPC)."""
+        return self._client.mask_string_rpc(value, extra_patterns=extra_patterns)
+
     def mask_dict_rpc(
         self,
         data: dict,
         extra_blocked_fields: list[str] | None = None,
         extra_patterns: list[str] | None = None,
     ) -> dict:
-        """Mask PII in a dict via the sidecar's MaskingService/Mask RPC."""
-        return self._client.mask_dict_rpc(
+        """Deprecated: use mask_dict_remote() for sidecar masking or mask_dict() for local masking."""
+        warnings.warn(
+            "mask_dict_rpc() is deprecated. Use mask_dict_remote() for sidecar masking "
+            "or mask_dict() for local masking.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.mask_dict_remote(
             data,
             extra_blocked_fields=extra_blocked_fields,
             extra_patterns=extra_patterns,
@@ -301,8 +335,14 @@ class SDK:
         value: str,
         extra_patterns: list[str] | None = None,
     ) -> str:
-        """Mask PII in a string via the sidecar's MaskingService/MaskString RPC."""
-        return self._client.mask_string_rpc(value, extra_patterns=extra_patterns)
+        """Deprecated: use mask_string_remote() for sidecar masking or mask_string() for local masking."""
+        warnings.warn(
+            "mask_string_rpc() is deprecated. Use mask_string_remote() for sidecar masking "
+            "or mask_string() for local masking.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return self.mask_string_remote(value, extra_patterns=extra_patterns)
 
     def mask_dict(self, data: dict) -> dict:
         """Mask PII in a dict using the SDK's local MaskingEngine.

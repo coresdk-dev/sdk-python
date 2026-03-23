@@ -50,6 +50,7 @@ skips = ["B101"]  # assert_used — OK in tests
 target-version = "py311"
 line-length = 100
 src = ["coresdk", "tests"]
+exclude = ["coresdk/gen/"]
 
 [tool.ruff.lint]
 select = [

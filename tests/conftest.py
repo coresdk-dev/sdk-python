@@ -53,7 +53,7 @@ def sdk():
         try:
             if client.health():
                 break
-        except Exception:
+        except Exception:  # noqa: S110
             pass
         time.sleep(0.2)
     else:

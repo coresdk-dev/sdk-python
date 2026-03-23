@@ -10,19 +10,19 @@ readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.9"
 dependencies = [
-    "grpcio>=1.60.0,<2.0.0",
-    "grpcio-status>=1.60.0,<2.0.0",
+    "grpcio>=1.68.0,<2.0.0",
+    "grpcio-status>=1.68.0,<2.0.0",
     "protobuf>=4.25.0,<6.0.0",
-    "opentelemetry-api>=1.25.0,<2.0.0",
-    "opentelemetry-sdk>=1.25.0,<2.0.0",
-    "opentelemetry-exporter-otlp>=1.25.0,<2.0.0",
+    "opentelemetry-api>=1.32.0,<2.0.0",
+    "opentelemetry-sdk>=1.32.0,<2.0.0",
+    "opentelemetry-exporter-otlp>=1.32.0,<2.0.0",
 ]
 
 [project.optional-dependencies]
 fastapi = ["fastapi>=0.100.0", "starlette>=0.27.0"]
 flask = ["flask>=2.3.0"]
 django = ["django>=4.2.0"]
-grpc = ["grpcio-tools>=1.60.0,<2.0.0"]
+grpc = ["grpcio-tools>=1.68.0,<2.0.0"]
 dev = [
     "pytest>=7.0",
     "pytest-asyncio>=0.21",

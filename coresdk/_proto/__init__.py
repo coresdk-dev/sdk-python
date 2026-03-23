@@ -15,7 +15,7 @@ try:
 except ImportError:
     # Fallback: hand-written dataclass stubs (no buf/grpcio-tools needed)
     from coresdk._proto import auth_pb2 as auth_pb2  # type: ignore[no-redef]  # noqa: F401
-    from coresdk._proto import policy_pb2 as policy_pb2  # type: ignore[no-redef]  # noqa: F401
+    from coresdk._proto import policy_pb2 as policy_pb2  # type: ignore[no-redef]
     _GENERATED = False
 
-__all__ = ["auth_pb2", "policy_pb2", "_GENERATED"]
+__all__ = ["_GENERATED", "auth_pb2", "policy_pb2"]

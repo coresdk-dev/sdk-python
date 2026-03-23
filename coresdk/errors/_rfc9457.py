@@ -1,7 +1,10 @@
 """RFC 9457 ProblemDetail error type."""
 
 import json
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from fastapi.responses import JSONResponse
 
 
 class ProblemDetailError(Exception):
@@ -64,7 +67,7 @@ class ProblemDetailError(Exception):
             "Bad Request", 400, detail=detail, type_uri="https://coresdk.io/errors/bad-request"
         )
 
-    def to_fastapi_response(self):
+    def to_fastapi_response(self) -> "JSONResponse":
         """Return a FastAPI JSONResponse.
 
         Lazily imports FastAPI to avoid a hard dependency on the framework.

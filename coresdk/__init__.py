@@ -317,7 +317,8 @@ class SDK:
         extra_blocked_fields: list[str] | None = None,
         extra_patterns: list[str] | None = None,
     ) -> dict:
-        """Deprecated: use mask_dict_remote() for sidecar masking or mask_dict() for local masking."""
+        """Deprecated: use mask_dict_remote() for sidecar masking or
+        mask_dict() for local masking."""
         warnings.warn(
             "mask_dict_rpc() is deprecated. Use mask_dict_remote() for sidecar masking "
             "or mask_dict() for local masking.",
@@ -335,7 +336,8 @@ class SDK:
         value: str,
         extra_patterns: list[str] | None = None,
     ) -> str:
-        """Deprecated: use mask_string_remote() for sidecar masking or mask_string() for local masking."""
+        """Deprecated: use mask_string_remote() for sidecar masking or
+        mask_string() for local masking."""
         warnings.warn(
             "mask_string_rpc() is deprecated. Use mask_string_remote() for sidecar masking "
             "or mask_string() for local masking.",
@@ -379,8 +381,9 @@ class SDK:
         """
         import re
 
-        _INJECTION_PATTERNS = [
-            (r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|context)", "high"),
+        _injection_patterns = [
+            (r"ignore\s+(all\s+)?(previous|prior|above)\s+(instructions?|prompts?|context)",
+             "high"),
             (r"reveal\s+(your\s+)?(system\s+)?prompt", "high"),
             (r"you\s+are\s+now\s+(?!an?\s+AI)", "medium"),
             (r"pretend\s+(you\s+are|to\s+be)", "medium"),
@@ -391,7 +394,7 @@ class SDK:
         ]
 
         _compiled = custom_patterns or []
-        all_patterns = [(re.compile(p, re.IGNORECASE), sev) for p, sev in _INJECTION_PATTERNS]
+        all_patterns = [(re.compile(p, re.IGNORECASE), sev) for p, sev in _injection_patterns]
         for cp in _compiled:
             all_patterns.append((re.compile(cp, re.IGNORECASE), "medium"))
 
@@ -405,7 +408,9 @@ class SDK:
                 continue
             for pat, sev in all_patterns:
                 if pat.search(content):
-                    detections.append({"pattern": pat.pattern, "message_index": idx, "severity": sev})
+                    detections.append(
+                        {"pattern": pat.pattern, "message_index": idx, "severity": sev}
+                    )
                     if severity_rank[sev] > severity_rank[max_sev]:
                         max_sev = sev
 

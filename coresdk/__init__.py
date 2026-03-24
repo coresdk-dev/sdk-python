@@ -1,4 +1,5 @@
 """CoreSDK — auth, policy, observability. One import."""
+
 from __future__ import annotations
 
 import json
@@ -442,9 +443,7 @@ class SDK:
         ttl_seconds: int = 300,
     ) -> AgentToken:
         """Mint a short-lived scoped JWT for agent-to-agent calls."""
-        return self._client.mint_agent_token(
-            parent_token, target_service, scopes, ttl_seconds
-        )
+        return self._client.mint_agent_token(parent_token, target_service, scopes, ttl_seconds)
 
     def check_egress(self, url: str, *, service_name: str = "") -> EgressDecision:
         """Check if an outbound URL is safe (SSRF protection). Fail-open."""

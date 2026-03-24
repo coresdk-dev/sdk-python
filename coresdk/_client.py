@@ -943,10 +943,7 @@ class CoreSDKClient:
             tenant_id = self.config.tenant_id or ""
             # MintAgentTokenRequest: parent_token(1), target_service(2), scopes(3) repeated,
             # ttl_seconds(4), tenant_id(5)
-            payload = (
-                _encode_string(1, parent_token)
-                + _encode_string(2, target_service)
-            )
+            payload = _encode_string(1, parent_token) + _encode_string(2, target_service)
             for scope in scopes:
                 payload += _encode_string(3, scope)
             payload += _encode_varint_field(4, min(ttl_seconds, 300))

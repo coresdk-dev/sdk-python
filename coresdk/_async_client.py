@@ -636,24 +636,20 @@ class AsyncCoreSDKClient:
         """Mint a short-lived scoped JWT for agent-to-agent delegation (async)."""
         try:
             tenant_id = self.config.tenant_id or ""
-            payload = (
-                _encode_string(1, parent_token)
-                + _encode_string(2, target_service)
-            )
+            payload = _encode_string(1, parent_token) + _encode_string(2, target_service)
             for scope in scopes:
                 payload += _encode_string(3, scope)
             payload += _encode_varint_field(4, min(ttl_seconds, 300))
             payload += _encode_string(5, tenant_id)
 
-            response_bytes = await self._call(
-                "/coresdk.v1.AuthService/MintAgentToken", payload
-            )
+            response_bytes = await self._call("/coresdk.v1.AuthService/MintAgentToken", payload)
             fields = _decode_fields(response_bytes)
             token_str = _field_str(fields, 1)
             expires = _field_int(fields, 2) or ttl_seconds
             chain_json = _field_str(fields, 3) or "[]"
             try:
                 import json as _json
+
                 chain = _json.loads(chain_json)
                 if not isinstance(chain, list):
                     chain = []
@@ -679,9 +675,7 @@ class AsyncCoreSDKClient:
                 + _encode_string(2, tenant_id)
                 + _encode_string(3, service_name)
             )
-            response_bytes = await self._call(
-                "/coresdk.v1.EgressService/CheckEgress", payload
-            )
+            response_bytes = await self._call("/coresdk.v1.EgressService/CheckEgress", payload)
             fields = _decode_fields(response_bytes)
             allowed = _field_bool(fields, 1)
             reason = _field_str(fields, 2)

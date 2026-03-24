@@ -171,7 +171,7 @@ class MockSDK:
         ttl_seconds: int = 300,
     ) -> AgentToken:
         return AgentToken(
-            token="mock.agent.token",
+            token="mock.agent.token",  # noqa: S106
             expires_in_seconds=300,
             agent_chain=["parent-service", target_service],
         )

@@ -17,7 +17,11 @@ try:
             super().__init__()
             self._sdk = sdk
 
-        def send(self, request: requests.PreparedRequest, **kwargs: object) -> requests.Response:
+        def send(  # type: ignore[override]
+            self,
+            request: requests.PreparedRequest,
+            **kwargs: bool | str | None | float,
+        ) -> requests.Response:
             decision = self._sdk.check_egress(str(request.url) if request.url else "")
             if not decision.allowed:
                 raise PermissionError(f"CoreSDK egress blocked: {decision.reason}")

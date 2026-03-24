@@ -104,3 +104,4 @@ warn_unused_ignores = false
 [[tool.mypy.overrides]]
 module = ["coresdk.egress"]
 ignore_missing_imports = true
+warn_unused_ignores = false

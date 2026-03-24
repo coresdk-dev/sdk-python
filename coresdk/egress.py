@@ -25,7 +25,7 @@ try:
             decision = self._sdk.check_egress(str(request.url) if request.url else "")
             if not decision.allowed:
                 raise PermissionError(f"CoreSDK egress blocked: {decision.reason}")
-            return super().send(request, **kwargs)
+            return super().send(request, **kwargs)  # type: ignore[arg-type]
 
 except ImportError:
     pass  # requests not installed

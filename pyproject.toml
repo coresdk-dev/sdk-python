@@ -99,3 +99,7 @@ module = ["coresdk.middleware.*"]
 disallow_untyped_defs = false
 warn_return_any = false
 warn_unused_ignores = false
+
+[[tool.mypy.overrides]]
+module = ["coresdk.egress"]
+ignore_missing_imports = true

@@ -33,9 +33,8 @@ from coresdk.middleware.flask import CoreSDKFlask, require_auth
 from coresdk.tracing.decorator import trace
 
 __all__ = [
-    "SDK",
-    "AsyncSDK",
     "AgentToken",
+    "AsyncSDK",
     "AuditRecord",
     "AuthDecision",
     "Claims",
@@ -48,6 +47,7 @@ __all__ = [
     "MaskingConfig",
     "ProblemDetailError",
     "RateLimitDecision",
+    "SDK",
     "SamlDecision",
     "TrialState",
     "coresdk_structlog_processor",
@@ -124,7 +124,7 @@ class SDK:
         return MaskingEngine()
 
     @classmethod
-    def from_env(cls) -> "SDK":
+    def from_env(cls) -> SDK:
         """Initialize SDK from environment variables.
 
         Reads: CORESDK_SIDECAR_ADDR, CORESDK_TENANT_ID, CORESDK_ENV,
@@ -134,7 +134,7 @@ class SDK:
         return cls(config)
 
     @classmethod
-    def from_config(cls, path: str | Path) -> "SDK":
+    def from_config(cls, path: str | Path) -> SDK:
         """Load SDK configuration from a TOML or JSON file.
 
         Supports TOML (requires tomllib/tomli) and JSON. TOML is preferred.

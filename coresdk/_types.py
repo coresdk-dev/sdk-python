@@ -125,3 +125,33 @@ class TrialState:
     is_trial: bool = False
     trial_ends_at: int = 0
     days_remaining: int = 0
+
+
+@dataclass
+class ExplainResult:
+    """Structured explanation of why a request was allowed or denied."""
+
+    request_id: str = ""
+    outcome: str = ""  # "allowed" | "denied"
+    auth: dict = field(default_factory=dict)
+    policy: dict = field(default_factory=dict)
+    rate_limit: dict = field(default_factory=dict)
+    masking: dict = field(default_factory=dict)
+    latency_ms: float = 0.0
+
+
+@dataclass
+class AgentToken:
+    """Short-lived scoped JWT for agent-to-agent delegation."""
+
+    token: str = ""
+    expires_in_seconds: int = 300
+    agent_chain: list = field(default_factory=list)  # list of subjects in delegation chain
+
+
+@dataclass
+class EgressDecision:
+    """Result of an outbound URL safety check."""
+
+    allowed: bool = True
+    reason: str = ""

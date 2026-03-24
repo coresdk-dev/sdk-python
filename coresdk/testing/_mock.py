@@ -4,9 +4,12 @@ import re
 from typing import Any
 
 from coresdk._types import (
+    AgentToken,
     AuditRecord,
     AuthDecision,
     Claims,
+    EgressDecision,
+    ExplainResult,
     FlagDecision,
     LicenseInfo,
     RateLimitDecision,
@@ -146,6 +149,35 @@ class MockSDK:
 
     def validate_isolation(self, requesting_tenant_id: str, resource_tenant_id: str) -> bool:
         return requesting_tenant_id == resource_tenant_id
+
+    def explain_authorize(
+        self, token: str, *, action: str = "", resource: str = ""
+    ) -> ExplainResult:
+        return ExplainResult(
+            request_id="mock-req",
+            outcome="allowed",
+            auth={},
+            policy={},
+            rate_limit={},
+            masking={},
+            latency_ms=1.0,
+        )
+
+    def mint_agent_token(
+        self,
+        parent_token: str,
+        target_service: str,
+        scopes: list,
+        ttl_seconds: int = 300,
+    ) -> AgentToken:
+        return AgentToken(
+            token="mock.agent.token",
+            expires_in_seconds=300,
+            agent_chain=["parent-service", target_service],
+        )
+
+    def check_egress(self, url: str, *, service_name: str = "") -> EgressDecision:
+        return EgressDecision(allowed=True, reason="mock-allowed")
 
     def mask_dict_rpc(self, data: dict, **kwargs: Any) -> dict:  # noqa: ANN401
         return data

@@ -18,9 +18,12 @@ from coresdk._client import (
 )
 from coresdk._config import SDKConfig
 from coresdk._types import (
+    AgentToken,
     AuditRecord,
     AuthDecision,
     Claims,
+    EgressDecision,
+    ExplainResult,
     FlagDecision,
     LicenseInfo,
     RateLimitDecision,
@@ -595,3 +598,95 @@ class AsyncCoreSDKClient:
         except Exception as e:
             logger.warning("ValidateIsolation RPC failed: %s", e)
             return requesting_tenant_id == resource_tenant_id
+
+    # -----------------------------------------------------------------
+    # ExplainAuthorize (async)
+    # -----------------------------------------------------------------
+
+    async def explain_authorize(
+        self, token: str, *, action: str = "", resource: str = ""
+    ) -> ExplainResult:
+        """Authorize a token and return a structured explanation of the decision (async)."""
+        try:
+            decision = await self.validate_token(token, action=action, resource=resource)
+            return ExplainResult(
+                outcome="allowed" if decision.allowed else "denied",
+                auth={
+                    "subject": decision.claims.sub if decision.claims else "",
+                    "allowed": decision.allowed,
+                    "reason": decision.reason,
+                },
+            )
+        except Exception as e:
+            if self.config.fail_mode == "open":
+                return ExplainResult(outcome="allowed", auth={"error": str(e)})
+            raise
+
+    # -----------------------------------------------------------------
+    # MintAgentToken (async)
+    # -----------------------------------------------------------------
+
+    async def mint_agent_token(
+        self,
+        parent_token: str,
+        target_service: str,
+        scopes: list,
+        ttl_seconds: int = 300,
+    ) -> AgentToken:
+        """Mint a short-lived scoped JWT for agent-to-agent delegation (async)."""
+        try:
+            tenant_id = self.config.tenant_id or ""
+            payload = (
+                _encode_string(1, parent_token)
+                + _encode_string(2, target_service)
+            )
+            for scope in scopes:
+                payload += _encode_string(3, scope)
+            payload += _encode_varint_field(4, min(ttl_seconds, 300))
+            payload += _encode_string(5, tenant_id)
+
+            response_bytes = await self._call(
+                "/coresdk.v1.AuthService/MintAgentToken", payload
+            )
+            fields = _decode_fields(response_bytes)
+            token_str = _field_str(fields, 1)
+            expires = _field_int(fields, 2) or ttl_seconds
+            chain_json = _field_str(fields, 3) or "[]"
+            try:
+                import json as _json
+                chain = _json.loads(chain_json)
+                if not isinstance(chain, list):
+                    chain = []
+            except Exception:
+                chain = []
+            return AgentToken(token=token_str, expires_in_seconds=int(expires), agent_chain=chain)
+        except Exception as e:
+            if self.config.fail_mode == "open":
+                logger.warning("MintAgentToken RPC failed, failing open: %s", e)
+                return AgentToken()
+            raise
+
+    # -----------------------------------------------------------------
+    # CheckEgress (async, SSRF protection)
+    # -----------------------------------------------------------------
+
+    async def check_egress(self, url: str, *, service_name: str = "") -> EgressDecision:
+        """Check whether an outbound URL is safe to fetch (SSRF protection) (async)."""
+        try:
+            tenant_id = self.config.tenant_id or ""
+            payload = (
+                _encode_string(1, url)
+                + _encode_string(2, tenant_id)
+                + _encode_string(3, service_name)
+            )
+            response_bytes = await self._call(
+                "/coresdk.v1.EgressService/CheckEgress", payload
+            )
+            fields = _decode_fields(response_bytes)
+            allowed = _field_bool(fields, 1)
+            reason = _field_str(fields, 2)
+            return EgressDecision(allowed=allowed, reason=reason)
+        except Exception as e:
+            # Always fail-open for egress checks
+            logger.warning("CheckEgress RPC failed, failing open: %s", e)
+            return EgressDecision(allowed=True, reason="sidecar unreachable (fail-open)")

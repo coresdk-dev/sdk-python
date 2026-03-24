@@ -8,9 +8,12 @@ import grpc
 
 from coresdk._config import SDKConfig
 from coresdk._types import (
+    AgentToken,
     AuditRecord,
     AuthDecision,
     Claims,
+    EgressDecision,
+    ExplainResult,
     FlagDecision,
     LicenseInfo,
     RateLimitDecision,
@@ -897,3 +900,117 @@ class CoreSDKClient:
         except grpc.RpcError as e:
             logger.warning("ValidateIsolation RPC failed: %s", e)
             return requesting_tenant_id == resource_tenant_id
+
+    # -----------------------------------------------------------------
+    # ExplainAuthorize
+    # -----------------------------------------------------------------
+
+    def explain_authorize(
+        self, token: str, *, action: str = "", resource: str = ""
+    ) -> ExplainResult:
+        """Authorize a token and return a structured explanation of the decision."""
+        try:
+            decision = self.validate_token(token, action=action, resource=resource)
+            return ExplainResult(
+                outcome="allowed" if decision.allowed else "denied",
+                auth={
+                    "subject": decision.claims.sub if decision.claims else "",
+                    "allowed": decision.allowed,
+                    "reason": decision.reason,
+                },
+            )
+        except Exception as e:
+            if self.config.fail_mode == "open":
+                return ExplainResult(outcome="allowed", auth={"error": str(e)})
+            raise
+
+    # -----------------------------------------------------------------
+    # MintAgentToken
+    # -----------------------------------------------------------------
+
+    def mint_agent_token(
+        self,
+        parent_token: str,
+        target_service: str,
+        scopes: list,
+        ttl_seconds: int = 300,
+    ) -> AgentToken:
+        """Mint a short-lived scoped JWT for agent-to-agent delegation."""
+        channel = self._get_channel()
+        if channel is None:
+            return AgentToken()
+        try:
+            tenant_id = self.config.tenant_id or ""
+            # MintAgentTokenRequest: parent_token(1), target_service(2), scopes(3) repeated,
+            # ttl_seconds(4), tenant_id(5)
+            payload = (
+                _encode_string(1, parent_token)
+                + _encode_string(2, target_service)
+            )
+            for scope in scopes:
+                payload += _encode_string(3, scope)
+            payload += _encode_varint_field(4, min(ttl_seconds, 300))
+            payload += _encode_string(5, tenant_id)
+
+            stub = channel.unary_unary(
+                "/coresdk.v1.AuthService/MintAgentToken",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload, metadata=self._metadata)
+            # MintAgentTokenResponse: token(1), expires_in_seconds(2), agent_chain_json(3)
+            fields = _decode_fields(response_bytes)
+            token_str = _field_str(fields, 1)
+            expires = _field_int(fields, 2) or ttl_seconds
+            chain_json = _field_str(fields, 3) or "[]"
+            try:
+                chain = json.loads(chain_json)
+                if not isinstance(chain, list):
+                    chain = []
+            except Exception:
+                chain = []
+            return AgentToken(token=token_str, expires_in_seconds=int(expires), agent_chain=chain)
+        except grpc.RpcError as e:
+            if self.config.fail_mode == "open":
+                logger.warning("MintAgentToken RPC failed, failing open: %s", e)
+                return AgentToken()
+            raise ProblemDetailError(
+                title="Agent Token Error",
+                status=500,
+                detail=str(e),
+                type_uri="https://coresdk.io/errors/agent-token",
+            ) from e
+
+    # -----------------------------------------------------------------
+    # CheckEgress (SSRF protection)
+    # -----------------------------------------------------------------
+
+    def check_egress(self, url: str, *, service_name: str = "") -> EgressDecision:
+        """Check whether an outbound URL is safe to fetch (SSRF protection)."""
+        channel = self._get_channel()
+        if channel is None:
+            # Fail-open: if sidecar unreachable, allow the request
+            return EgressDecision(allowed=True, reason="sidecar unreachable (fail-open)")
+        try:
+            tenant_id = self.config.tenant_id or ""
+            # CheckEgressRequest: url(1), tenant_id(2), service_name(3)
+            payload = (
+                _encode_string(1, url)
+                + _encode_string(2, tenant_id)
+                + _encode_string(3, service_name)
+            )
+            stub = channel.unary_unary(
+                "/coresdk.v1.EgressService/CheckEgress",
+                request_serializer=lambda x: x,
+                response_deserializer=lambda x: x,
+            )
+            response_bytes = stub(payload, metadata=self._metadata)
+            # CheckEgressResponse: allowed(1), reason(2)
+            fields = _decode_fields(response_bytes)
+            allowed = _field_bool(fields, 1)
+            reason = _field_str(fields, 2)
+            return EgressDecision(allowed=allowed, reason=reason)
+        except grpc.RpcError as e:
+            # Always fail-open for egress checks to avoid blocking legitimate traffic
+            logger.warning("CheckEgress RPC failed, failing open: %s", e)
+            return EgressDecision(allowed=True, reason="sidecar unreachable (fail-open)")

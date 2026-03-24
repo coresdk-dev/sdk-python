@@ -12,9 +12,12 @@ from coresdk._client import CoreSDKClient
 from coresdk._config import SDKConfig
 from coresdk._context import _current_request_id, _current_tenant, _current_user
 from coresdk._types import (
+    AgentToken,
     AuditRecord,
     AuthDecision,
     Claims,
+    EgressDecision,
+    ExplainResult,
     FlagDecision,
     LicenseInfo,
     RateLimitDecision,
@@ -31,11 +34,14 @@ from coresdk.tracing.decorator import trace
 __all__ = [
     "SDK",
     "AsyncSDK",
+    "AgentToken",
     "AuditRecord",
     "AuthDecision",
     "Claims",
     "CoreSDKFlask",
     "DjangoMiddleware",
+    "EgressDecision",
+    "ExplainResult",
     "FlagDecision",
     "LicenseInfo",
     "MaskingConfig",
@@ -420,6 +426,28 @@ class SDK:
             "risk": max_sev,
             "detections": detections,
         }
+
+    def explain_authorize(
+        self, token: str, *, action: str = "", resource: str = ""
+    ) -> ExplainResult:
+        """Authorize and get a structured explanation of why the decision was made."""
+        return self._client.explain_authorize(token, action=action, resource=resource)
+
+    def mint_agent_token(
+        self,
+        parent_token: str,
+        target_service: str,
+        scopes: list,
+        ttl_seconds: int = 300,
+    ) -> AgentToken:
+        """Mint a short-lived scoped JWT for agent-to-agent calls."""
+        return self._client.mint_agent_token(
+            parent_token, target_service, scopes, ttl_seconds
+        )
+
+    def check_egress(self, url: str, *, service_name: str = "") -> EgressDecision:
+        """Check if an outbound URL is safe (SSRF protection). Fail-open."""
+        return self._client.check_egress(url, service_name=service_name)
 
     @contextmanager
     def tenant_scope(self, tenant_id: str, user_id: str = "") -> Iterator[None]:

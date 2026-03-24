@@ -10,8 +10,11 @@ from coresdk._async_client import AsyncCoreSDKClient
 from coresdk._config import SDKConfig
 from coresdk._context import _current_tenant, _current_user
 from coresdk._types import (
+    AgentToken,
     AuditRecord,
     AuthDecision,
+    EgressDecision,
+    ExplainResult,
     FlagDecision,
     LicenseInfo,
     RateLimitDecision,
@@ -208,6 +211,28 @@ class AsyncSDK:
     ) -> bool:
         """Validate cross-tenant isolation (async)."""
         return await self._client.validate_isolation(requesting_tenant_id, resource_tenant_id)
+
+    async def explain_authorize(
+        self, token: str, *, action: str = "", resource: str = ""
+    ) -> ExplainResult:
+        """Authorize and get a structured explanation of why the decision was made (async)."""
+        return await self._client.explain_authorize(token, action=action, resource=resource)
+
+    async def mint_agent_token(
+        self,
+        parent_token: str,
+        target_service: str,
+        scopes: list,
+        ttl_seconds: int = 300,
+    ) -> AgentToken:
+        """Mint a short-lived scoped JWT for agent-to-agent calls (async)."""
+        return await self._client.mint_agent_token(
+            parent_token, target_service, scopes, ttl_seconds
+        )
+
+    async def check_egress(self, url: str, *, service_name: str = "") -> EgressDecision:
+        """Check if an outbound URL is safe (SSRF protection) (async). Fail-open."""
+        return await self._client.check_egress(url, service_name=service_name)
 
     @asynccontextmanager
     async def async_tenant_scope(self, tenant_id: str, user_id: str = "") -> AsyncIterator[None]:

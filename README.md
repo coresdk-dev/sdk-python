@@ -630,6 +630,40 @@ Full working projects in [coresdk-dev/examples](https://github.com/coresdk-dev/e
 
 ---
 
+## Jobs (containerised long-running work)
+
+`coresdk.AsyncSDK` exposes the sidecar's `JobService` — an async
+K8s-backed (or local-subprocess in dev) job orchestrator with typed
+lifecycle events, blob-store I/O, and RBAC-gated secret injection.
+
+```python
+from coresdk import AsyncSDK
+
+sdk = AsyncSDK.from_env()
+
+result = await sdk.run_job(
+    kind="claude-cli",
+    image="ghcr.io/zysec/cpod-claude-cli:latest",
+    command=["claude"],
+    inline_files={"prompt.md": b"hello"},       # ≤1 MiB total, staged to S3
+    secret_bundles=["anthropic-prod"],          # RBAC-gated injection
+    user_id="alice@example.com",
+    timeout_seconds=600,
+    on_progress=lambda ev: print(ev.kind, ev.stage),
+)
+# result.status ∈ {"succeeded","failed","cancelled"}
+# result.output.files → list of OutputFile with short-lived presigned URLs
+```
+
+The async path uses native `grpc.aio` — `watch_job` and `stream_job_logs`
+are true async generators with one asyncio task per stream (no thread
+bridge).
+
+Public types: `Job`, `JobEvent`, `JobOutput`, `LogLine`, `OutputFile`,
+`RunJobResult`, `SecretRef`. `MockSDK` from `coresdk.testing` supports
+scripted event sequences via `set_job_events(kind, [...])`. See the
+[Jobs reference](https://docs.coresdk.dev/jobs) for the full surface.
+
 ## Development
 
 ```bash

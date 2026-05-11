@@ -44,6 +44,11 @@ class AuthServiceStub(object):
                 request_serializer=coresdk_dot_v1_dot_auth__pb2.ValidateSamlAssertionRequest.SerializeToString,
                 response_deserializer=coresdk_dot_v1_dot_auth__pb2.ValidateSamlAssertionResponse.FromString,
                 _registered_method=True)
+        self.RefreshToken = channel.unary_unary(
+                '/coresdk.v1.AuthService/RefreshToken',
+                request_serializer=coresdk_dot_v1_dot_auth__pb2.RefreshTokenRequest.SerializeToString,
+                response_deserializer=coresdk_dot_v1_dot_auth__pb2.RefreshTokenResponse.FromString,
+                _registered_method=True)
 
 
 class AuthServiceServicer(object):
@@ -85,6 +90,14 @@ class AuthServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def RefreshToken(self, request, context):
+        """Exchange a valid refresh JWT (typ="refresh") for a new access JWT + new refresh JWT.
+        Sidecar validates the refresh token locally (same HMAC key), then issues new tokens.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AuthServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -117,6 +130,11 @@ def add_AuthServiceServicer_to_server(servicer, server):
                     servicer.ValidateSAMLAssertion,
                     request_deserializer=coresdk_dot_v1_dot_auth__pb2.ValidateSamlAssertionRequest.FromString,
                     response_serializer=coresdk_dot_v1_dot_auth__pb2.ValidateSamlAssertionResponse.SerializeToString,
+            ),
+            'RefreshToken': grpc.unary_unary_rpc_method_handler(
+                    servicer.RefreshToken,
+                    request_deserializer=coresdk_dot_v1_dot_auth__pb2.RefreshTokenRequest.FromString,
+                    response_serializer=coresdk_dot_v1_dot_auth__pb2.RefreshTokenResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -281,6 +299,33 @@ class AuthService(object):
             '/coresdk.v1.AuthService/ValidateSAMLAssertion',
             coresdk_dot_v1_dot_auth__pb2.ValidateSamlAssertionRequest.SerializeToString,
             coresdk_dot_v1_dot_auth__pb2.ValidateSamlAssertionResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RefreshToken(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/coresdk.v1.AuthService/RefreshToken',
+            coresdk_dot_v1_dot_auth__pb2.RefreshTokenRequest.SerializeToString,
+            coresdk_dot_v1_dot_auth__pb2.RefreshTokenResponse.FromString,
             options,
             channel_credentials,
             insecure,

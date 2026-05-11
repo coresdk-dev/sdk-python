@@ -185,6 +185,76 @@ class MockSDK:
     def mask_string_rpc(self, value: str, **kwargs: Any) -> str:  # noqa: ANN401
         return value
 
+    # ── JobService (mock) ─────────────────────────────────────────────
+    #
+    # Tests can script job submissions + event sequences without booting a
+    # sidecar / cluster.
+
+    def set_job_events(self, kind: str, events: list[Any]) -> None:
+        """Set a scripted sequence of JobEvents to emit for jobs of ``kind``."""
+        if not hasattr(self, "_job_event_scripts"):
+            self._job_event_scripts = {}
+        self._job_event_scripts[kind] = list(events)
+
+    def set_job_output(self, kind: str, output: Any) -> None:
+        """Set the JobOutput returned by `get_job_output` for jobs of ``kind``."""
+        if not hasattr(self, "_job_outputs"):
+            self._job_outputs = {}
+        self._job_outputs[kind] = output
+
+    def submit_job(self, **kw: Any) -> Any:  # noqa: ANN401
+        import uuid
+
+        from coresdk.jobs import Job
+
+        job = Job(
+            job_id=str(uuid.uuid4()),
+            kind=kw.get("kind", "mock"),
+            image=kw.get("image", ""),
+            tenant_id=kw.get("tenant_id", "test"),
+            user_id=kw.get("user_id", ""),
+            state="pending",
+        )
+        if not hasattr(self, "_submitted_jobs"):
+            self._submitted_jobs = []
+        self._submitted_jobs.append((job, kw))
+        return job
+
+    def get_job(self, job_id: str, **_: Any) -> Any:  # noqa: ANN401
+        from coresdk.jobs import Job
+
+        for job, _kw in getattr(self, "_submitted_jobs", []):
+            if job.job_id == job_id:
+                return job
+        return Job(job_id=job_id, state="failed", error="not found")
+
+    def cancel_job(self, job_id: str, **_: Any) -> Any:  # noqa: ANN401
+        from coresdk.jobs import Job
+
+        return Job(job_id=job_id, state="cancelled")
+
+    def list_jobs(self, **_: Any) -> list:  # noqa: ANN401
+        return [job for job, _kw in getattr(self, "_submitted_jobs", [])]
+
+    def watch_job(self, job_id: str, **_: Any):  # noqa: ANN401
+        scripts = getattr(self, "_job_event_scripts", {})
+        for job, _kw in getattr(self, "_submitted_jobs", []):
+            if job.job_id == job_id:
+                yield from scripts.get(job.kind, [])
+                return
+
+    def stream_job_logs(self, job_id: str, **_: Any):  # noqa: ANN401
+        return iter([])
+
+    def get_job_output(self, job_id: str, **_: Any) -> Any:  # noqa: ANN401
+        from coresdk.jobs import JobOutput
+
+        outs = getattr(self, "_job_outputs", {})
+        for job, _kw in getattr(self, "_submitted_jobs", []):
+            if job.job_id == job_id:
+                return outs.get(job.kind, JobOutput())
+        return JobOutput()
+
     class _MockConfig:
         def __init__(self) -> None:
             self.fail_mode: str = "open"

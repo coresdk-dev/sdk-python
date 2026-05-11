@@ -27,6 +27,7 @@ from coresdk._types import (
     TrialState,
 )
 from coresdk.errors._rfc9457 import ProblemDetailError
+from coresdk.jobs import Job, JobEvent, JobOutput, LogLine, OutputFile, RunJobResult, SecretRef
 from coresdk.logging import coresdk_structlog_processor
 from coresdk.masking import MaskingConfig, MaskingEngine, mask_dict, mask_llm_content, mask_string
 from coresdk.middleware.django import CoreSDKMiddleware as DjangoMiddleware
@@ -45,7 +46,14 @@ __all__ = [
     "EgressDecision",
     "ExplainResult",
     "FlagDecision",
+    "Job",
+    "JobEvent",
+    "JobOutput",
     "LicenseInfo",
+    "LogLine",
+    "OutputFile",
+    "RunJobResult",
+    "SecretRef",
     "MaskingConfig",
     "ProblemDetailError",
     "RateLimitDecision",
@@ -284,6 +292,122 @@ class SDK:
     def dry_run_policy(self, rule: str, input_data: dict) -> bool:
         """Dry-run a policy evaluation (does not enforce)."""
         return self._client.dry_run_policy(rule, input_data)
+
+    # ── JobService ─────────────────────────────────────────────────────
+
+    def _jobs(self):
+        """Lazily-constructed jobs client. Cached on first access."""
+        c = getattr(self, "_jobs_client", None)
+        if c is None:
+            from coresdk._jobs import JobsClient
+
+            c = JobsClient(self._client)
+            self._jobs_client = c
+        return c
+
+    def submit_job(
+        self,
+        *,
+        kind: str,
+        image: str = "",
+        command: list[str] | None = None,
+        args: list[str] | None = None,
+        env: dict[str, str] | None = None,
+        inline_files: dict[str, bytes] | None = None,
+        input_s3_uri: str | None = None,
+        secret_refs: list | None = None,
+        secret_bundles: list[str] | None = None,
+        timeout_seconds: int = 0,
+        capture_logs: bool = True,
+        capture_output: bool = True,
+        output_prefix: str = "",
+        user_id: str = "",
+        tenant_id: str = "",
+    ):
+        """Submit a job to the sidecar's JobService.
+
+        Returns a :class:`coresdk.jobs.Job` snapshot. The job starts in
+        ``"pending"`` state; subscribe via :meth:`watch_job` for progress.
+
+        Reserved env keys (``CORESDK_*``) are rejected — those are owned by
+        the platform for dynamic context injection. ``inline_files`` is capped
+        at 1 MiB total by the server; use ``input_s3_uri`` for larger inputs.
+        """
+        from coresdk._jobs import encode_submit_job_request
+
+        payload = encode_submit_job_request(
+            kind=kind,
+            image=image,
+            command=command or [],
+            args=args or [],
+            env=env or {},
+            inline_files=inline_files,
+            input_s3_uri=input_s3_uri,
+            secret_refs=secret_refs or [],
+            secret_bundles=secret_bundles or [],
+            timeout_seconds=timeout_seconds,
+            capture_logs=capture_logs,
+            capture_output=capture_output,
+            output_prefix=output_prefix,
+            tenant_id=tenant_id or self.config.tenant_id,
+            user_id=user_id,
+        )
+        return self._jobs().submit_job(payload)
+
+    def get_job(self, job_id: str, *, tenant_id: str = ""):
+        """Fetch a snapshot of the current state of ``job_id``."""
+        return self._jobs().get_job(job_id, tenant_id or self.config.tenant_id)
+
+    def list_jobs(
+        self,
+        *,
+        tenant_id: str = "",
+        state: str = "",
+        limit: int = 100,
+    ):
+        """List jobs for the calling tenant. ``state`` filter is exact-match
+        against the wire enum names (``"pending"`` etc.)."""
+        return self._jobs().list_jobs(tenant_id or self.config.tenant_id, state, limit)
+
+    def cancel_job(
+        self,
+        job_id: str,
+        *,
+        reason: str = "",
+        tenant_id: str = "",
+    ):
+        """Cooperatively cancel a running job. Idempotent on terminal jobs."""
+        return self._jobs().cancel_job(job_id, tenant_id or self.config.tenant_id, reason)
+
+    def watch_job(self, job_id: str, *, tenant_id: str = ""):
+        """Stream :class:`coresdk.jobs.JobEvent` until ``job_id`` is terminal."""
+        return self._jobs().watch_job(job_id, tenant_id or self.config.tenant_id)
+
+    def stream_job_logs(
+        self,
+        job_id: str,
+        *,
+        tenant_id: str = "",
+        follow: bool = True,
+        tail_lines: int = 0,
+    ):
+        """Tail stdout/stderr from a running job's container."""
+        return self._jobs().stream_job_logs(
+            job_id, tenant_id or self.config.tenant_id, follow, tail_lines
+        )
+
+    def get_job_output(
+        self,
+        job_id: str,
+        *,
+        tenant_id: str = "",
+        presign_ttl_seconds: int = 900,
+    ):
+        """List output files persisted under the job's output prefix, with
+        short-lived presigned GET URLs."""
+        return self._jobs().get_job_output(
+            job_id, tenant_id or self.config.tenant_id, presign_ttl_seconds
+        )
 
     def get_config(self) -> dict:
         """Get the current config snapshot from the sidecar."""

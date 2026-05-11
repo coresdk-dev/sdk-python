@@ -236,29 +236,25 @@ class AsyncSDK:
 
     # ── JobService (async) ─────────────────────────────────────────────
     #
-    # The job lifecycle is async-by-default — `submit_job` returns a job_id
-    # immediately, `watch_job` is a true async generator. Under the hood the
-    # unary RPCs hop the sync `grpcio` client through a thread executor so we
-    # don't re-implement the wire encoding for `grpc.aio`. A future
-    # optimisation can swap in a native aio path without changing the API.
+    # Native grpc.aio implementation. Unary RPCs are a single await; streaming
+    # RPCs are true async generators driven by grpc.aio.UnaryStreamCall. No
+    # thread bridging, no asyncio.run_coroutine_threadsafe, no producer
+    # threads — each stream consumes only its own asyncio task.
 
-    def _sync_jobs_client(self):
-        from coresdk._client import CoreSDKClient
-        from coresdk._jobs import JobsClient
+    def _async_jobs_client(self):
+        from coresdk._async_jobs import AsyncJobsClient
 
-        c = getattr(self, "_sync_peer", None)
+        c = getattr(self, "_aio_jobs", None)
         if c is None:
-            c = CoreSDKClient(self.config)
-            self._sync_peer = c
-        return JobsClient(c)
+            c = AsyncJobsClient(self._client)
+            self._aio_jobs = c
+        return c
 
     async def submit_job(self, **kw):
         """Async version of ``SDK.submit_job``."""
-        import asyncio
-
         from coresdk._jobs import encode_submit_job_request
 
-        jc = self._sync_jobs_client()
+        jc = self._async_jobs_client()
         payload = encode_submit_job_request(
             kind=kw.get("kind", ""),
             image=kw.get("image", ""),
@@ -276,70 +272,35 @@ class AsyncSDK:
             tenant_id=kw.get("tenant_id") or self.config.tenant_id,
             user_id=kw.get("user_id", ""),
         )
-        return await asyncio.to_thread(jc.submit_job, payload)
+        return await jc.submit_job(payload)
 
     async def get_job(self, job_id: str, *, tenant_id: str = ""):
-        import asyncio
-
-        jc = self._sync_jobs_client()
-        return await asyncio.to_thread(
-            jc.get_job, job_id, tenant_id or self.config.tenant_id
-        )
+        jc = self._async_jobs_client()
+        return await jc.get_job(job_id, tenant_id or self.config.tenant_id)
 
     async def cancel_job(self, job_id: str, *, reason: str = "", tenant_id: str = ""):
-        import asyncio
-
-        jc = self._sync_jobs_client()
-        return await asyncio.to_thread(
-            jc.cancel_job, job_id, tenant_id or self.config.tenant_id, reason
-        )
+        jc = self._async_jobs_client()
+        return await jc.cancel_job(job_id, tenant_id or self.config.tenant_id, reason)
 
     async def list_jobs(self, *, tenant_id: str = "", state: str = "", limit: int = 100):
-        import asyncio
-
-        jc = self._sync_jobs_client()
-        return await asyncio.to_thread(
-            jc.list_jobs, tenant_id or self.config.tenant_id, state, limit
-        )
+        jc = self._async_jobs_client()
+        return await jc.list_jobs(tenant_id or self.config.tenant_id, state, limit)
 
     async def get_job_output(
         self, job_id: str, *, tenant_id: str = "", presign_ttl_seconds: int = 900
     ):
-        import asyncio
-
-        jc = self._sync_jobs_client()
-        return await asyncio.to_thread(
-            jc.get_job_output,
-            job_id,
-            tenant_id or self.config.tenant_id,
-            presign_ttl_seconds,
+        jc = self._async_jobs_client()
+        return await jc.get_job_output(
+            job_id, tenant_id or self.config.tenant_id, presign_ttl_seconds
         )
 
     async def watch_job(self, job_id: str, *, tenant_id: str = ""):
         """Async generator of :class:`coresdk.jobs.JobEvent` — closes on terminal state."""
-        import asyncio
-        import threading
-
-        jc = self._sync_jobs_client()
-        loop = asyncio.get_running_loop()
-        q: asyncio.Queue = asyncio.Queue()
-        SENTINEL = object()
-
-        def producer():
-            try:
-                for ev in jc.watch_job(job_id, tenant_id or self.config.tenant_id):
-                    asyncio.run_coroutine_threadsafe(q.put(ev), loop)
-                    if ev.kind in ("succeeded", "failed", "cancelled"):
-                        break
-            finally:
-                asyncio.run_coroutine_threadsafe(q.put(SENTINEL), loop)
-
-        threading.Thread(target=producer, daemon=True).start()
-        while True:
-            item = await q.get()
-            if item is SENTINEL:
+        jc = self._async_jobs_client()
+        async for ev in jc.watch_job(job_id, tenant_id or self.config.tenant_id):
+            yield ev
+            if ev.kind in ("succeeded", "failed", "cancelled"):
                 return
-            yield item
 
     async def stream_job_logs(
         self,
@@ -350,29 +311,11 @@ class AsyncSDK:
         tail_lines: int = 0,
     ):
         """Async generator of :class:`coresdk.jobs.LogLine`."""
-        import asyncio
-        import threading
-
-        jc = self._sync_jobs_client()
-        loop = asyncio.get_running_loop()
-        q: asyncio.Queue = asyncio.Queue()
-        SENTINEL = object()
-
-        def producer():
-            try:
-                for line in jc.stream_job_logs(
-                    job_id, tenant_id or self.config.tenant_id, follow, tail_lines
-                ):
-                    asyncio.run_coroutine_threadsafe(q.put(line), loop)
-            finally:
-                asyncio.run_coroutine_threadsafe(q.put(SENTINEL), loop)
-
-        threading.Thread(target=producer, daemon=True).start()
-        while True:
-            item = await q.get()
-            if item is SENTINEL:
-                return
-            yield item
+        jc = self._async_jobs_client()
+        async for line in jc.stream_job_logs(
+            job_id, tenant_id or self.config.tenant_id, follow, tail_lines
+        ):
+            yield line
 
     async def run_job(
         self,

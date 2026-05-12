@@ -467,8 +467,15 @@ class AsyncCoreSDKClient:
         action: str = "",
         resource: str = "",
         tenant_id: str = "",
+        required_scope: str | None = None,
     ) -> AuthDecision:
-        """Combined auth+authz via AuthService/Authorize (async)."""
+        """Combined auth+authz via AuthService/Authorize (async).
+
+        Args:
+            required_scope: Optional OAuth 2.0 scope filter (RFC 6749 §3.3).
+                Space-separated; multiple values mean "all of these". Wildcard
+                ``jobs.*`` on the granted side satisfies ``jobs.write``.
+        """
         channel = await self._get_channel()
         if channel is None:
             return self._fail_open_decision()
@@ -476,6 +483,8 @@ class AsyncCoreSDKClient:
             payload = (
                 _encode_string(2, action) + _encode_string(3, resource) + _encode_string(7, token)
             )
+            if required_scope:
+                payload += _encode_string(8, required_scope)
             response_bytes = await self._call("/coresdk.v1.AuthService/Authorize", payload)
             fields = _decode_fields(response_bytes)
             allowed = _field_bool(fields, 1)

@@ -278,11 +278,28 @@ class SDK:
         )
 
     def authorize_request(
-        self, token: str, action: str = "", resource: str = "", *, tenant_id: str = ""
+        self,
+        token: str,
+        action: str = "",
+        resource: str = "",
+        *,
+        tenant_id: str = "",
+        required_scope: str | None = None,
     ) -> AuthDecision:
-        """Combined auth + authz check via AuthService/Authorize."""
+        """Combined auth + authz check via AuthService/Authorize.
+
+        Args:
+            required_scope: Optional OAuth 2.0 scope filter (RFC 6749 §3.3).
+                Space-separated list of scope names; multiple values mean
+                "all of these". A granted ``jobs.*`` satisfies any required
+                ``jobs.<action>``. Denial reason is ``insufficient_scope``.
+        """
         return self._client.authorize_request(
-            token, action=action, resource=resource, tenant_id=tenant_id
+            token,
+            action=action,
+            resource=resource,
+            tenant_id=tenant_id,
+            required_scope=required_scope,
         )
 
     def get_jwks(self) -> str:

@@ -182,10 +182,21 @@ class AsyncSDK:
         resource: str = "",
         *,
         tenant_id: str = "",
+        required_scope: str | None = None,
     ) -> AuthDecision:
-        """Combined auth + authz check (async)."""
+        """Combined auth + authz check (async).
+
+        Args:
+            required_scope: Optional OAuth 2.0 scope filter (RFC 6749 §3.3).
+                Space-separated list of scope names; multiple values mean
+                "all of these". Denial reason is ``insufficient_scope``.
+        """
         return await self._client.authorize_request(
-            token, action=action, resource=resource, tenant_id=tenant_id
+            token,
+            action=action,
+            resource=resource,
+            tenant_id=tenant_id,
+            required_scope=required_scope,
         )
 
     async def get_jwks(self) -> str:

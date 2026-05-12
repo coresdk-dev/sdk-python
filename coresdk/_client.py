@@ -688,8 +688,16 @@ class CoreSDKClient:
         action: str = "",
         resource: str = "",
         tenant_id: str = "",
+        required_scope: str | None = None,
     ) -> AuthDecision:
-        """Combined auth+authz via AuthService/Authorize."""
+        """Combined auth+authz via AuthService/Authorize.
+
+        Args:
+            required_scope: Optional OAuth 2.0 scope filter (RFC 6749 §3.3).
+                Space-separated list of scope names; multiple values mean
+                "all of these" (logical AND). A granted ``jobs.*`` satisfies
+                a required ``jobs.write``.
+        """
         effective_tenant = tenant_id or self.config.tenant_id
         channel = self._get_channel()
         if channel is None:
@@ -700,10 +708,12 @@ class CoreSDKClient:
                 tenant_id=effective_tenant,
             )
         try:
-            # AuthorizeRequest: subject(1), action(2), resource(3), token(7)
+            # AuthorizeRequest: subject(1), action(2), resource(3), token(7), required_scope(8)
             payload = (
                 _encode_string(2, action) + _encode_string(3, resource) + _encode_string(7, token)
             )
+            if required_scope:
+                payload += _encode_string(8, required_scope)
             stub = channel.unary_unary(
                 "/coresdk.v1.AuthService/Authorize",
                 request_serializer=lambda x: x,

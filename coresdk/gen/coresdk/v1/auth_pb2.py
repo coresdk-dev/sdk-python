@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from coresdk.v1 import common_pb2 as coresdk_dot_v1_dot_common__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x63oresdk/v1/auth.proto\x12\ncoresdk.v1\x1a\x17\x63oresdk/v1/common.proto\"\xc5\x01\n\x14ValidateTokenRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token\x12\x31\n\x06tenant\x18\x02 \x01(\x0b\x32\x19.coresdk.v1.TenantContextR\x06tenant\x12\x37\n\x08metadata\x18\x03 \x01(\x0b\x32\x1b.coresdk.v1.RequestMetadataR\x08metadata\x12+\n\x11\x65xpected_audience\x18\x04 \x01(\tR\x10\x65xpectedAudience\"\xaf\x02\n\x15ValidateTokenResponse\x12\x14\n\x05valid\x18\x01 \x01(\x08R\x05valid\x12\x18\n\x07subject\x18\x02 \x01(\tR\x07subject\x12\x14\n\x05roles\x18\x03 \x03(\tR\x05roles\x12\x45\n\x06\x63laims\x18\x04 \x03(\x0b\x32-.coresdk.v1.ValidateTokenResponse.ClaimsEntryR\x06\x63laims\x12\x1d\n\nexpires_at\x18\x05 \x01(\x03R\texpiresAt\x12/\n\x05\x65rror\x18\x06 \x01(\x0b\x32\x19.coresdk.v1.ProblemDetailR\x05\x65rror\x1a\x39\n\x0b\x43laimsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"\xe3\x02\n\x10\x41uthorizeRequest\x12\x18\n\x07subject\x18\x01 \x01(\tR\x07subject\x12\x16\n\x06\x61\x63tion\x18\x02 \x01(\tR\x06\x61\x63tion\x12\x1a\n\x08resource\x18\x03 \x01(\tR\x08resource\x12\x31\n\x06tenant\x18\x04 \x01(\x0b\x32\x19.coresdk.v1.TenantContextR\x06tenant\x12\x37\n\x08metadata\x18\x05 \x01(\x0b\x32\x1b.coresdk.v1.RequestMetadataR\x08metadata\x12\x43\n\x07\x63ontext\x18\x06 \x03(\x0b\x32).coresdk.v1.AuthorizeRequest.ContextEntryR\x07\x63ontext\x12\x14\n\x05token\x18\x07 \x01(\tR\x05token\x1a:\n\x0c\x43ontextEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"v\n\x11\x41uthorizeResponse\x12\x18\n\x07\x61llowed\x18\x01 \x01(\x08R\x07\x61llowed\x12\x16\n\x06reason\x18\x02 \x01(\tR\x06reason\x12/\n\x05\x65rror\x18\x03 \x01(\x0b\x32\x19.coresdk.v1.ProblemDetailR\x05\x65rror\"C\n\x0eGetJwksRequest\x12\x31\n\x06tenant\x18\x01 \x01(\x0b\x32\x19.coresdk.v1.TenantContextR\x06tenant\".\n\x0fGetJwksResponse\x12\x1b\n\tjwks_json\x18\x01 \x01(\tR\x08jwksJson\"_\n\x12RevokeTokenRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token\x12\x1b\n\ttenant_id\x18\x02 \x01(\tR\x08tenantId\x12\x16\n\x06reason\x18\x03 \x01(\tR\x06reason\"/\n\x13RevokeTokenResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\"(\n\x10IsRevokedRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token\"-\n\x11IsRevokedResponse\x12\x18\n\x07revoked\x18\x01 \x01(\x08R\x07revoked\"\x84\x01\n\x1cValidateSamlAssertionRequest\x12#\n\rassertion_b64\x18\x01 \x01(\tR\x0c\x61ssertionB64\x12\"\n\ridp_entity_id\x18\x02 \x01(\tR\x0bidpEntityId\x12\x1b\n\ttenant_id\x18\x03 \x01(\tR\x08tenantId\"\xd6\x01\n\x1dValidateSamlAssertionResponse\x12\x14\n\x05valid\x18\x01 \x01(\x08R\x05valid\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12\x14\n\x05\x65mail\x18\x03 \x01(\tR\x05\x65mail\x12\x16\n\x06groups\x18\x04 \x03(\tR\x06groups\x12\'\n\x0f\x61ttributes_json\x18\x05 \x01(\tR\x0e\x61ttributesJson\x12/\n\x05\x65rror\x18\x06 \x01(\x0b\x32\x19.coresdk.v1.ProblemDetailR\x05\x65rror\":\n\x13RefreshTokenRequest\x12#\n\rrefresh_token\x18\x01 \x01(\tR\x0crefreshToken\"|\n\x14RefreshTokenResponse\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token\x12\x1d\n\nexpires_at\x18\x02 \x01(\x03R\texpiresAt\x12/\n\x05\x65rror\x18\x03 \x01(\x0b\x32\x19.coresdk.v1.ProblemDetailR\x05\x65rror2\xcc\x04\n\x0b\x41uthService\x12T\n\rValidateToken\x12 .coresdk.v1.ValidateTokenRequest\x1a!.coresdk.v1.ValidateTokenResponse\x12H\n\tAuthorize\x12\x1c.coresdk.v1.AuthorizeRequest\x1a\x1d.coresdk.v1.AuthorizeResponse\x12\x42\n\x07GetJwks\x12\x1a.coresdk.v1.GetJwksRequest\x1a\x1b.coresdk.v1.GetJwksResponse\x12N\n\x0bRevokeToken\x12\x1e.coresdk.v1.RevokeTokenRequest\x1a\x1f.coresdk.v1.RevokeTokenResponse\x12H\n\tIsRevoked\x12\x1c.coresdk.v1.IsRevokedRequest\x1a\x1d.coresdk.v1.IsRevokedResponse\x12l\n\x15ValidateSAMLAssertion\x12(.coresdk.v1.ValidateSamlAssertionRequest\x1a).coresdk.v1.ValidateSamlAssertionResponse\x12Q\n\x0cRefreshToken\x12\x1f.coresdk.v1.RefreshTokenRequest\x1a .coresdk.v1.RefreshTokenResponseB.Z,github.com/coresdk-dev/sdk-go/gen/coresdk/v1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x15\x63oresdk/v1/auth.proto\x12\ncoresdk.v1\x1a\x17\x63oresdk/v1/common.proto\"\xc5\x01\n\x14ValidateTokenRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token\x12\x31\n\x06tenant\x18\x02 \x01(\x0b\x32\x19.coresdk.v1.TenantContextR\x06tenant\x12\x37\n\x08metadata\x18\x03 \x01(\x0b\x32\x1b.coresdk.v1.RequestMetadataR\x08metadata\x12+\n\x11\x65xpected_audience\x18\x04 \x01(\tR\x10\x65xpectedAudience\"\xaf\x02\n\x15ValidateTokenResponse\x12\x14\n\x05valid\x18\x01 \x01(\x08R\x05valid\x12\x18\n\x07subject\x18\x02 \x01(\tR\x07subject\x12\x14\n\x05roles\x18\x03 \x03(\tR\x05roles\x12\x45\n\x06\x63laims\x18\x04 \x03(\x0b\x32-.coresdk.v1.ValidateTokenResponse.ClaimsEntryR\x06\x63laims\x12\x1d\n\nexpires_at\x18\x05 \x01(\x03R\texpiresAt\x12/\n\x05\x65rror\x18\x06 \x01(\x0b\x32\x19.coresdk.v1.ProblemDetailR\x05\x65rror\x1a\x39\n\x0b\x43laimsEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"\x8a\x03\n\x10\x41uthorizeRequest\x12\x18\n\x07subject\x18\x01 \x01(\tR\x07subject\x12\x16\n\x06\x61\x63tion\x18\x02 \x01(\tR\x06\x61\x63tion\x12\x1a\n\x08resource\x18\x03 \x01(\tR\x08resource\x12\x31\n\x06tenant\x18\x04 \x01(\x0b\x32\x19.coresdk.v1.TenantContextR\x06tenant\x12\x37\n\x08metadata\x18\x05 \x01(\x0b\x32\x1b.coresdk.v1.RequestMetadataR\x08metadata\x12\x43\n\x07\x63ontext\x18\x06 \x03(\x0b\x32).coresdk.v1.AuthorizeRequest.ContextEntryR\x07\x63ontext\x12\x14\n\x05token\x18\x07 \x01(\tR\x05token\x12%\n\x0erequired_scope\x18\x08 \x01(\tR\rrequiredScope\x1a:\n\x0c\x43ontextEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"v\n\x11\x41uthorizeResponse\x12\x18\n\x07\x61llowed\x18\x01 \x01(\x08R\x07\x61llowed\x12\x16\n\x06reason\x18\x02 \x01(\tR\x06reason\x12/\n\x05\x65rror\x18\x03 \x01(\x0b\x32\x19.coresdk.v1.ProblemDetailR\x05\x65rror\"C\n\x0eGetJwksRequest\x12\x31\n\x06tenant\x18\x01 \x01(\x0b\x32\x19.coresdk.v1.TenantContextR\x06tenant\".\n\x0fGetJwksResponse\x12\x1b\n\tjwks_json\x18\x01 \x01(\tR\x08jwksJson\"_\n\x12RevokeTokenRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token\x12\x1b\n\ttenant_id\x18\x02 \x01(\tR\x08tenantId\x12\x16\n\x06reason\x18\x03 \x01(\tR\x06reason\"/\n\x13RevokeTokenResponse\x12\x18\n\x07success\x18\x01 \x01(\x08R\x07success\"(\n\x10IsRevokedRequest\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token\"-\n\x11IsRevokedResponse\x12\x18\n\x07revoked\x18\x01 \x01(\x08R\x07revoked\"\x84\x01\n\x1cValidateSamlAssertionRequest\x12#\n\rassertion_b64\x18\x01 \x01(\tR\x0c\x61ssertionB64\x12\"\n\ridp_entity_id\x18\x02 \x01(\tR\x0bidpEntityId\x12\x1b\n\ttenant_id\x18\x03 \x01(\tR\x08tenantId\"\xd6\x01\n\x1dValidateSamlAssertionResponse\x12\x14\n\x05valid\x18\x01 \x01(\x08R\x05valid\x12\x17\n\x07user_id\x18\x02 \x01(\tR\x06userId\x12\x14\n\x05\x65mail\x18\x03 \x01(\tR\x05\x65mail\x12\x16\n\x06groups\x18\x04 \x03(\tR\x06groups\x12\'\n\x0f\x61ttributes_json\x18\x05 \x01(\tR\x0e\x61ttributesJson\x12/\n\x05\x65rror\x18\x06 \x01(\x0b\x32\x19.coresdk.v1.ProblemDetailR\x05\x65rror\":\n\x13RefreshTokenRequest\x12#\n\rrefresh_token\x18\x01 \x01(\tR\x0crefreshToken\"|\n\x14RefreshTokenResponse\x12\x14\n\x05token\x18\x01 \x01(\tR\x05token\x12\x1d\n\nexpires_at\x18\x02 \x01(\x03R\texpiresAt\x12/\n\x05\x65rror\x18\x03 \x01(\x0b\x32\x19.coresdk.v1.ProblemDetailR\x05\x65rror2\xcc\x04\n\x0b\x41uthService\x12T\n\rValidateToken\x12 .coresdk.v1.ValidateTokenRequest\x1a!.coresdk.v1.ValidateTokenResponse\x12H\n\tAuthorize\x12\x1c.coresdk.v1.AuthorizeRequest\x1a\x1d.coresdk.v1.AuthorizeResponse\x12\x42\n\x07GetJwks\x12\x1a.coresdk.v1.GetJwksRequest\x1a\x1b.coresdk.v1.GetJwksResponse\x12N\n\x0bRevokeToken\x12\x1e.coresdk.v1.RevokeTokenRequest\x1a\x1f.coresdk.v1.RevokeTokenResponse\x12H\n\tIsRevoked\x12\x1c.coresdk.v1.IsRevokedRequest\x1a\x1d.coresdk.v1.IsRevokedResponse\x12l\n\x15ValidateSAMLAssertion\x12(.coresdk.v1.ValidateSamlAssertionRequest\x1a).coresdk.v1.ValidateSamlAssertionResponse\x12Q\n\x0cRefreshToken\x12\x1f.coresdk.v1.RefreshTokenRequest\x1a .coresdk.v1.RefreshTokenResponseB.Z,github.com/coresdk-dev/sdk-go/gen/coresdk/v1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -44,31 +44,31 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_VALIDATETOKENRESPONSE_CLAIMSENTRY']._serialized_start=509
   _globals['_VALIDATETOKENRESPONSE_CLAIMSENTRY']._serialized_end=566
   _globals['_AUTHORIZEREQUEST']._serialized_start=569
-  _globals['_AUTHORIZEREQUEST']._serialized_end=924
-  _globals['_AUTHORIZEREQUEST_CONTEXTENTRY']._serialized_start=866
-  _globals['_AUTHORIZEREQUEST_CONTEXTENTRY']._serialized_end=924
-  _globals['_AUTHORIZERESPONSE']._serialized_start=926
-  _globals['_AUTHORIZERESPONSE']._serialized_end=1044
-  _globals['_GETJWKSREQUEST']._serialized_start=1046
-  _globals['_GETJWKSREQUEST']._serialized_end=1113
-  _globals['_GETJWKSRESPONSE']._serialized_start=1115
-  _globals['_GETJWKSRESPONSE']._serialized_end=1161
-  _globals['_REVOKETOKENREQUEST']._serialized_start=1163
-  _globals['_REVOKETOKENREQUEST']._serialized_end=1258
-  _globals['_REVOKETOKENRESPONSE']._serialized_start=1260
-  _globals['_REVOKETOKENRESPONSE']._serialized_end=1307
-  _globals['_ISREVOKEDREQUEST']._serialized_start=1309
-  _globals['_ISREVOKEDREQUEST']._serialized_end=1349
-  _globals['_ISREVOKEDRESPONSE']._serialized_start=1351
-  _globals['_ISREVOKEDRESPONSE']._serialized_end=1396
-  _globals['_VALIDATESAMLASSERTIONREQUEST']._serialized_start=1399
-  _globals['_VALIDATESAMLASSERTIONREQUEST']._serialized_end=1531
-  _globals['_VALIDATESAMLASSERTIONRESPONSE']._serialized_start=1534
-  _globals['_VALIDATESAMLASSERTIONRESPONSE']._serialized_end=1748
-  _globals['_REFRESHTOKENREQUEST']._serialized_start=1750
-  _globals['_REFRESHTOKENREQUEST']._serialized_end=1808
-  _globals['_REFRESHTOKENRESPONSE']._serialized_start=1810
-  _globals['_REFRESHTOKENRESPONSE']._serialized_end=1934
-  _globals['_AUTHSERVICE']._serialized_start=1937
-  _globals['_AUTHSERVICE']._serialized_end=2525
+  _globals['_AUTHORIZEREQUEST']._serialized_end=963
+  _globals['_AUTHORIZEREQUEST_CONTEXTENTRY']._serialized_start=905
+  _globals['_AUTHORIZEREQUEST_CONTEXTENTRY']._serialized_end=963
+  _globals['_AUTHORIZERESPONSE']._serialized_start=965
+  _globals['_AUTHORIZERESPONSE']._serialized_end=1083
+  _globals['_GETJWKSREQUEST']._serialized_start=1085
+  _globals['_GETJWKSREQUEST']._serialized_end=1152
+  _globals['_GETJWKSRESPONSE']._serialized_start=1154
+  _globals['_GETJWKSRESPONSE']._serialized_end=1200
+  _globals['_REVOKETOKENREQUEST']._serialized_start=1202
+  _globals['_REVOKETOKENREQUEST']._serialized_end=1297
+  _globals['_REVOKETOKENRESPONSE']._serialized_start=1299
+  _globals['_REVOKETOKENRESPONSE']._serialized_end=1346
+  _globals['_ISREVOKEDREQUEST']._serialized_start=1348
+  _globals['_ISREVOKEDREQUEST']._serialized_end=1388
+  _globals['_ISREVOKEDRESPONSE']._serialized_start=1390
+  _globals['_ISREVOKEDRESPONSE']._serialized_end=1435
+  _globals['_VALIDATESAMLASSERTIONREQUEST']._serialized_start=1438
+  _globals['_VALIDATESAMLASSERTIONREQUEST']._serialized_end=1570
+  _globals['_VALIDATESAMLASSERTIONRESPONSE']._serialized_start=1573
+  _globals['_VALIDATESAMLASSERTIONRESPONSE']._serialized_end=1787
+  _globals['_REFRESHTOKENREQUEST']._serialized_start=1789
+  _globals['_REFRESHTOKENREQUEST']._serialized_end=1847
+  _globals['_REFRESHTOKENRESPONSE']._serialized_start=1849
+  _globals['_REFRESHTOKENRESPONSE']._serialized_end=1973
+  _globals['_AUTHSERVICE']._serialized_start=1976
+  _globals['_AUTHSERVICE']._serialized_end=2564
 # @@protoc_insertion_point(module_scope)

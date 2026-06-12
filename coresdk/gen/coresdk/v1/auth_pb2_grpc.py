@@ -49,6 +49,11 @@ class AuthServiceStub(object):
                 request_serializer=coresdk_dot_v1_dot_auth__pb2.RefreshTokenRequest.SerializeToString,
                 response_deserializer=coresdk_dot_v1_dot_auth__pb2.RefreshTokenResponse.FromString,
                 _registered_method=True)
+        self.ValidatePlatformContext = channel.unary_unary(
+                '/coresdk.v1.AuthService/ValidatePlatformContext',
+                request_serializer=coresdk_dot_v1_dot_auth__pb2.ValidatePlatformContextRequest.SerializeToString,
+                response_deserializer=coresdk_dot_v1_dot_auth__pb2.ValidatePlatformContextResponse.FromString,
+                _registered_method=True)
 
 
 class AuthServiceServicer(object):
@@ -98,6 +103,19 @@ class AuthServiceServicer(object):
         context.set_details('Method not implemented!')
         raise NotImplementedError('Method not implemented!')
 
+    def ValidatePlatformContext(self, request, context):
+        """AP-06 (#205): Validate a base64-encoded PlatformContext issued to an
+        app-store app. The sidecar verifies the HMAC-SHA256 signature using the
+        app's stored client_secret, checks the issued_at TTL, and filters the
+        embedded permissions against the current grants in
+        `core_app_permission_grants` (real-time, not cached). Apps receive the
+        filtered permission list instead of doing HMAC validation themselves,
+        which closes the 6-minute revocation window (TTL 300s + 60s skew).
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
 
 def add_AuthServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
@@ -135,6 +153,11 @@ def add_AuthServiceServicer_to_server(servicer, server):
                     servicer.RefreshToken,
                     request_deserializer=coresdk_dot_v1_dot_auth__pb2.RefreshTokenRequest.FromString,
                     response_serializer=coresdk_dot_v1_dot_auth__pb2.RefreshTokenResponse.SerializeToString,
+            ),
+            'ValidatePlatformContext': grpc.unary_unary_rpc_method_handler(
+                    servicer.ValidatePlatformContext,
+                    request_deserializer=coresdk_dot_v1_dot_auth__pb2.ValidatePlatformContextRequest.FromString,
+                    response_serializer=coresdk_dot_v1_dot_auth__pb2.ValidatePlatformContextResponse.SerializeToString,
             ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -326,6 +349,33 @@ class AuthService(object):
             '/coresdk.v1.AuthService/RefreshToken',
             coresdk_dot_v1_dot_auth__pb2.RefreshTokenRequest.SerializeToString,
             coresdk_dot_v1_dot_auth__pb2.RefreshTokenResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ValidatePlatformContext(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/coresdk.v1.AuthService/ValidatePlatformContext',
+            coresdk_dot_v1_dot_auth__pb2.ValidatePlatformContextRequest.SerializeToString,
+            coresdk_dot_v1_dot_auth__pb2.ValidatePlatformContextResponse.FromString,
             options,
             channel_credentials,
             insecure,

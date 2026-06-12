@@ -19,6 +19,11 @@ class AuditServiceStub(object):
                 request_serializer=coresdk_dot_v1_dot_audit__pb2.EmitAuditEventRequest.SerializeToString,
                 response_deserializer=coresdk_dot_v1_dot_audit__pb2.EmitAuditEventResponse.FromString,
                 _registered_method=True)
+        self.EmitAuthEvent = channel.unary_unary(
+                '/coresdk.v1.AuditService/EmitAuthEvent',
+                request_serializer=coresdk_dot_v1_dot_audit__pb2.AuthEventProto.SerializeToString,
+                response_deserializer=coresdk_dot_v1_dot_audit__pb2.EmitAuthEventResponse.FromString,
+                _registered_method=True)
         self.QueryAudit = channel.unary_unary(
                 '/coresdk.v1.AuditService/QueryAudit',
                 request_serializer=coresdk_dot_v1_dot_audit__pb2.QueryAuditRequest.SerializeToString,
@@ -30,6 +35,12 @@ class AuditServiceServicer(object):
     """Missing associated documentation comment in .proto file."""
 
     def EmitAuditEvent(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def EmitAuthEvent(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -48,6 +59,11 @@ def add_AuditServiceServicer_to_server(servicer, server):
                     servicer.EmitAuditEvent,
                     request_deserializer=coresdk_dot_v1_dot_audit__pb2.EmitAuditEventRequest.FromString,
                     response_serializer=coresdk_dot_v1_dot_audit__pb2.EmitAuditEventResponse.SerializeToString,
+            ),
+            'EmitAuthEvent': grpc.unary_unary_rpc_method_handler(
+                    servicer.EmitAuthEvent,
+                    request_deserializer=coresdk_dot_v1_dot_audit__pb2.AuthEventProto.FromString,
+                    response_serializer=coresdk_dot_v1_dot_audit__pb2.EmitAuthEventResponse.SerializeToString,
             ),
             'QueryAudit': grpc.unary_unary_rpc_method_handler(
                     servicer.QueryAudit,
@@ -82,6 +98,33 @@ class AuditService(object):
             '/coresdk.v1.AuditService/EmitAuditEvent',
             coresdk_dot_v1_dot_audit__pb2.EmitAuditEventRequest.SerializeToString,
             coresdk_dot_v1_dot_audit__pb2.EmitAuditEventResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def EmitAuthEvent(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/coresdk.v1.AuditService/EmitAuthEvent',
+            coresdk_dot_v1_dot_audit__pb2.AuthEventProto.SerializeToString,
+            coresdk_dot_v1_dot_audit__pb2.EmitAuthEventResponse.FromString,
             options,
             channel_credentials,
             insecure,

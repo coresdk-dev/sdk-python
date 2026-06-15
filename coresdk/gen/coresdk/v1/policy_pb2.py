@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from coresdk.v1 import common_pb2 as coresdk_dot_v1_dot_common__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x63oresdk/v1/policy.proto\x12\ncoresdk.v1\x1a\x17\x63oresdk/v1/common.proto\"\xb6\x01\n\x15PolicyEvaluateRequest\x12\x12\n\x04rule\x18\x01 \x01(\tR\x04rule\x12\x1d\n\ninput_json\x18\x02 \x01(\tR\tinputJson\x12\x31\n\x06tenant\x18\x03 \x01(\x0b\x32\x19.coresdk.v1.TenantContextR\x06tenant\x12\x37\n\x08metadata\x18\x04 \x01(\x0b\x32\x1b.coresdk.v1.RequestMetadataR\x08metadata\"\x92\x01\n\x16PolicyEvaluateResponse\x12\x16\n\x06result\x18\x01 \x01(\x08R\x06result\x12\x16\n\x06reason\x18\x02 \x01(\tR\x06reason\x12\x17\n\x07\x64ry_run\x18\x03 \x01(\x08R\x06\x64ryRun\x12/\n\x05\x65rror\x18\x04 \x01(\x0b\x32\x19.coresdk.v1.ProblemDetailR\x05\x65rror\"~\n\x19WatchPolicyUpdatesRequest\x12\x31\n\x06tenant\x18\x01 \x01(\x0b\x32\x19.coresdk.v1.TenantContextR\x06tenant\x12.\n\x13last_bundle_version\x18\x02 \x01(\tR\x11lastBundleVersion\"{\n\x12PolicyBundleUpdate\x12%\n\x0e\x62undle_version\x18\x01 \x01(\tR\rbundleVersion\x12\x1f\n\x0b\x62undle_data\x18\x02 \x01(\x0cR\nbundleData\x12\x1d\n\nupdated_at\x18\x03 \x01(\x03R\tupdatedAt2\x92\x02\n\rPolicyService\x12Q\n\x08\x45valuate\x12!.coresdk.v1.PolicyEvaluateRequest\x1a\".coresdk.v1.PolicyEvaluateResponse\x12O\n\x06\x44ryRun\x12!.coresdk.v1.PolicyEvaluateRequest\x1a\".coresdk.v1.PolicyEvaluateResponse\x12]\n\x12WatchPolicyUpdates\x12%.coresdk.v1.WatchPolicyUpdatesRequest\x1a\x1e.coresdk.v1.PolicyBundleUpdate0\x01\x42.Z,github.com/coresdk-dev/sdk-go/gen/coresdk/v1b\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x17\x63oresdk/v1/policy.proto\x12\ncoresdk.v1\x1a\x17\x63oresdk/v1/common.proto\"\xb6\x01\n\x15PolicyEvaluateRequest\x12\x12\n\x04rule\x18\x01 \x01(\tR\x04rule\x12\x1d\n\ninput_json\x18\x02 \x01(\tR\tinputJson\x12\x31\n\x06tenant\x18\x03 \x01(\x0b\x32\x19.coresdk.v1.TenantContextR\x06tenant\x12\x37\n\x08metadata\x18\x04 \x01(\x0b\x32\x1b.coresdk.v1.RequestMetadataR\x08metadata\"\xd9\x01\n\x16PolicyEvaluateResponse\x12\x16\n\x06result\x18\x01 \x01(\x08R\x06result\x12\x16\n\x06reason\x18\x02 \x01(\tR\x06reason\x12\x17\n\x07\x64ry_run\x18\x03 \x01(\x08R\x06\x64ryRun\x12/\n\x05\x65rror\x18\x04 \x01(\x0b\x32\x19.coresdk.v1.ProblemDetailR\x05\x65rror\x12\x45\n\rresource_perm\x18\n \x01(\x0b\x32 .coresdk.v1.ResourcePermDecisionR\x0cresourcePerm\"\xb1\x02\n\x14ResourcePermDecision\x12\x1a\n\x08\x64\x65\x63ision\x18\x01 \x01(\tR\x08\x64\x65\x63ision\x12\x1f\n\x0breason_code\x18\x02 \x01(\tR\nreasonCode\x12#\n\rreason_detail\x18\x03 \x01(\tR\x0creasonDetail\x12%\n\x0epolicy_version\x18\x04 \x01(\tR\rpolicyVersion\x12\x45\n\x0bobligations\x18\x05 \x01(\x0b\x32#.coresdk.v1.ResourcePermObligationsR\x0bobligations\x12(\n\x10safe_http_status\x18\x06 \x01(\x05R\x0esafeHttpStatus\x12\x1f\n\x0b\x64\x65\x63ision_id\x18\x07 \x01(\tR\ndecisionId\"\xcd\x01\n\x17ResourcePermObligations\x12\x14\n\x05\x61udit\x18\x01 \x01(\x08R\x05\x61udit\x12,\n\x12mask_field_classes\x18\x02 \x03(\tR\x10maskFieldClasses\x12\x19\n\x08max_rows\x18\x03 \x01(\x03R\x07maxRows\x12\x1d\n\nexpires_at\x18\x04 \x01(\tR\texpiresAt\x12\x34\n\x16requires_approval_type\x18\x05 \x01(\tR\x14requiresApprovalType\"~\n\x19WatchPolicyUpdatesRequest\x12\x31\n\x06tenant\x18\x01 \x01(\x0b\x32\x19.coresdk.v1.TenantContextR\x06tenant\x12.\n\x13last_bundle_version\x18\x02 \x01(\tR\x11lastBundleVersion\"{\n\x12PolicyBundleUpdate\x12%\n\x0e\x62undle_version\x18\x01 \x01(\tR\rbundleVersion\x12\x1f\n\x0b\x62undle_data\x18\x02 \x01(\x0cR\nbundleData\x12\x1d\n\nupdated_at\x18\x03 \x01(\x03R\tupdatedAt2\x92\x02\n\rPolicyService\x12Q\n\x08\x45valuate\x12!.coresdk.v1.PolicyEvaluateRequest\x1a\".coresdk.v1.PolicyEvaluateResponse\x12O\n\x06\x44ryRun\x12!.coresdk.v1.PolicyEvaluateRequest\x1a\".coresdk.v1.PolicyEvaluateResponse\x12]\n\x12WatchPolicyUpdates\x12%.coresdk.v1.WatchPolicyUpdatesRequest\x1a\x1e.coresdk.v1.PolicyBundleUpdate0\x01\x42.Z,github.com/coresdk-dev/sdk-go/gen/coresdk/v1b\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,11 +36,15 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_POLICYEVALUATEREQUEST']._serialized_start=65
   _globals['_POLICYEVALUATEREQUEST']._serialized_end=247
   _globals['_POLICYEVALUATERESPONSE']._serialized_start=250
-  _globals['_POLICYEVALUATERESPONSE']._serialized_end=396
-  _globals['_WATCHPOLICYUPDATESREQUEST']._serialized_start=398
-  _globals['_WATCHPOLICYUPDATESREQUEST']._serialized_end=524
-  _globals['_POLICYBUNDLEUPDATE']._serialized_start=526
-  _globals['_POLICYBUNDLEUPDATE']._serialized_end=649
-  _globals['_POLICYSERVICE']._serialized_start=652
-  _globals['_POLICYSERVICE']._serialized_end=926
+  _globals['_POLICYEVALUATERESPONSE']._serialized_end=467
+  _globals['_RESOURCEPERMDECISION']._serialized_start=470
+  _globals['_RESOURCEPERMDECISION']._serialized_end=775
+  _globals['_RESOURCEPERMOBLIGATIONS']._serialized_start=778
+  _globals['_RESOURCEPERMOBLIGATIONS']._serialized_end=983
+  _globals['_WATCHPOLICYUPDATESREQUEST']._serialized_start=985
+  _globals['_WATCHPOLICYUPDATESREQUEST']._serialized_end=1111
+  _globals['_POLICYBUNDLEUPDATE']._serialized_start=1113
+  _globals['_POLICYBUNDLEUPDATE']._serialized_end=1236
+  _globals['_POLICYSERVICE']._serialized_start=1239
+  _globals['_POLICYSERVICE']._serialized_end=1513
 # @@protoc_insertion_point(module_scope)

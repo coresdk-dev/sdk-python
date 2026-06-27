@@ -1,8 +1,8 @@
 # This file is written automatically by core-sdk's sdk-sync.yml
 # workflow on every develop push. Do not hand-edit.
-core_sdk_sha:    e472cd1337dbbd4499d39c7fd9e7268aac05af6c
+core_sdk_sha:    eae932b88b24fcd3bced2a780524d79d627c57e5
 core_sdk_ref:    refs/heads/develop
-synced_at:       2026-06-27T10:49:44Z
+synced_at:       2026-06-27T17:17:24Z
 language:        python
 template:        buf.gen.python.yaml
-workflow_run_id: 28286988751
+workflow_run_id: 28296224499
